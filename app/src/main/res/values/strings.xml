@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Baby Lullaby</string>
+    <string name="playback_channel_name">Playback Controls</string>
+    <string name="playback_channel_description">Media playback controls</string>
+</resources>
