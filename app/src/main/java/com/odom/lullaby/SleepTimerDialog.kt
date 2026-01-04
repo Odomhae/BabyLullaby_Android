@@ -1,7 +1,10 @@
 package com.odom.lullaby
 
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
 fun SleepTimerDialog(
@@ -27,7 +30,7 @@ fun SleepTimerDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         },
         title = { Text("Set sleep timer (minutes)") },
@@ -36,7 +39,8 @@ fun SleepTimerDialog(
                 value = timerInputMinutes,
                 onValueChange = onMinutesChange,
                 label = { Text("Minutes (1-180)") },
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         }
     )

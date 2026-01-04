@@ -28,6 +28,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.ui.Alignment
+import androidx.core.app.NotificationManagerCompat
 import androidx.media3.common.MediaMetadata
 import com.odom.lullaby.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.launch
@@ -84,21 +85,22 @@ class MainActivity : ComponentActivity() {
             
             MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = false) {
                 val contextInner = LocalContext.current
-                
-                    // Create notification channel for Android O and above
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        val channel = android.app.NotificationChannel(
-                            CHANNEL_ID,
-                            "Playback Controls",
-                            NotificationManager.IMPORTANCE_LOW
-                        ).apply {
-                            description = "Media playback controls"
-                            setShowBadge(false)
-                            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-                        }
-                        val notificationManager = contextInner.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                        notificationManager.createNotificationChannel(channel)
+
+                // Create notification channel for Android O and above
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    val channel = android.app.NotificationChannel(
+                        CHANNEL_ID,
+                        "Playback Controls",
+                        NotificationManager.IMPORTANCE_LOW
+                    ).apply {
+                        description = "Media playback controls"
+                        setShowBadge(false)
+                        lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                     }
+
+                    val notificationManager = contextInner.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    notificationManager.createNotificationChannel(channel)
+                }
 
                 // Create player with proper lifecycle management
                 val player = remember {
@@ -169,7 +171,7 @@ class MainActivity : ComponentActivity() {
                         setMediaSessionToken(mediaSession.sessionCompatToken)
                         setPlayer(player)
                     }
-            }
+                }
 
                 val playlist = remember { mutableStateListOf<MediaItem>() }
                 val sharedPreferences = remember {
@@ -187,8 +189,8 @@ class MainActivity : ComponentActivity() {
                             fileName.endsWith(".wav", ignoreCase = true) ||
                             fileName.endsWith(".ogg", ignoreCase = true) ||
                             fileName.endsWith(".aac", ignoreCase = true)
-                } ?: emptyList()
-            }
+                    } ?: emptyList()
+                }
                 
                 // Load white sound files from assets/whitesound folder
                 val whiteSoundFolder = "whitesound"
@@ -274,14 +276,15 @@ class MainActivity : ComponentActivity() {
                 isPlaying = player.isPlaying
                 currentIndex = player.currentMediaItemIndex
 
-                        onDispose {
-                            player.removeListener(listener)
-                            notificationManager.setPlayer(null)
-                            mediaSession.release()
-                            player.release()
-                            //    player = null
-                        }
+                    onDispose {
+                        player.removeListener(listener)
+                        notificationManager.setPlayer(null)
+                        mediaSession.release()
+                        player.release()
+                        //    player = null
                     }
+
+                }
 
                 Column(modifier = Modifier
                     .fillMaxSize()) {
