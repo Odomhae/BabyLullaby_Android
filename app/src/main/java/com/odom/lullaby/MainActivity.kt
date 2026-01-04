@@ -234,6 +234,27 @@ class MainActivity : ComponentActivity() {
                         if (playlist.isNotEmpty()) {
                             player.prepare()
                         }
+                    } else {
+                        // If no saved playlist, add all songs in order
+                        assetFiles.forEach { fileName ->
+                            val mediaId = "asset:///$assetFolder/$fileName"
+                            val uri = Uri.parse(mediaId)
+                            val displayName = fileName.substringBeforeLast(".")
+                            val item = MediaItem.Builder()
+                                .setUri(uri)
+                                .setMediaId(mediaId)
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(displayName)
+                                        .build()
+                                )
+                                .build()
+                            playlist.add(item)
+                            player.addMediaItem(item)
+                        }
+                        if (playlist.isNotEmpty()) {
+                            player.prepare()
+                        }
                     }
                     isInitialLoad = false
                 }
