@@ -1,6 +1,7 @@
 package com.odom.lullaby
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -36,9 +37,19 @@ fun PlaylistScreen(
 
         // 제어 버튼들 (아이콘으로 표시)
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.Center, //Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
+            IconButton(
+                onClick = { player.seekToPreviousMediaItem() },
+                enabled = playlist.isNotEmpty()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SkipPrevious,
+                    contentDescription = "이전곡"
+                )
+            }
+
             IconButton(onClick = {
                 if (isPlaying) player.pause() else player.play()
             }) {
@@ -48,12 +59,12 @@ fun PlaylistScreen(
                 )
             }
 
-            IconButton(onClick = { player.stop() }) {
-                Icon(
-                    imageVector = Icons.Default.Stop,
-                    contentDescription = "정지"
-                )
-            }
+//            IconButton(onClick = { player.stop() }) {
+//                Icon(
+//                    imageVector = Icons.Default.Stop,
+//                    contentDescription = "정지"
+//                )
+//            }
 
             IconButton(
                 onClick = { player.seekToNextMediaItem() },
@@ -62,16 +73,6 @@ fun PlaylistScreen(
                 Icon(
                     imageVector = Icons.Default.SkipNext,
                     contentDescription = "다음곡"
-                )
-            }
-
-            IconButton(
-                onClick = { player.seekToPreviousMediaItem() },
-                enabled = playlist.isNotEmpty()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SkipPrevious,
-                    contentDescription = "이전곡"
                 )
             }
 

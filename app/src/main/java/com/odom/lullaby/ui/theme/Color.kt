@@ -15,3 +15,7 @@ val PurpleGrey40 = Color(0xFF7A6B8F) // Muted purple-grey
 val Pink40 = Color(0xFFB8869B) // Soft dusty pink
 val Accent40 = Color(0xFF4A90E2) // Calm blue for accents in light theme
 val SurfaceVariant40 = Color(0xFFF0F0F5) // Very light grey-blue
+
+val Blue = Color(0xFF84C9FB)
+
+val BlueDark = Color(0XFF6ab0e1)

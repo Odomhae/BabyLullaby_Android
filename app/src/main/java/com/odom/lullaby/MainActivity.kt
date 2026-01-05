@@ -27,6 +27,7 @@ import androidx.media3.ui.PlayerNotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
 import androidx.core.app.NotificationManagerCompat
 import androidx.media3.common.MediaMetadata
@@ -46,7 +47,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            Modifier.systemBarsPadding()
+            Modifier.systemBarsPadding().background(Color.Gray)
 
             val context = LocalContext.current
             val sharedPreferencesForTheme = remember {

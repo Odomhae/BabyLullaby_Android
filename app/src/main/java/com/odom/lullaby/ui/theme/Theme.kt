@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80, // Soft lavender
+    primary = Blue, // Soft lavender
     secondary = PurpleGrey80, // Muted purple-grey
     tertiary = Pink80, // Soft pink
     background = Color(0xFF0F0F1A), // Very dark blue-grey background
@@ -29,7 +29,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40, // Deeper lavender
+    primary = BlueDark, // Deeper lavender
     secondary = PurpleGrey40, // Muted purple-grey
     tertiary = Pink40, // Soft dusty pink
     background = Color(0xFFFFFBFE), // Warm white background
