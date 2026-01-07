@@ -28,12 +28,14 @@ import android.app.PendingIntent
 import android.content.Intent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import androidx.core.app.NotificationManagerCompat
 import androidx.media3.common.MediaMetadata
 import com.odom.lullaby.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 private const val PLAYBACK_NOTIFICATION_ID = 1
@@ -111,12 +113,103 @@ class MainActivity : ComponentActivity() {
 //                    notificationManager.createNotificationChannel(channel)
 //                }
 
-                // Create player with proper lifecycle management
-                val player = remember {
+                // Create players with proper lifecycle management
+                val playlistPlayer = remember {
                     ExoPlayer.Builder(contextInner).build().apply {
                         // Enable repeat mode to loop through entire playlist
                         repeatMode = Player.REPEAT_MODE_ALL
                     }
+                }
+                
+                val whiteSoundPlayer = remember {
+                    ExoPlayer.Builder(contextInner).build().apply {
+                        // Set repeat mode to ONE to loop single file
+                        repeatMode = Player.REPEAT_MODE_ONE
+                    }
+                }
+                
+                // Shared sleep timer state
+                val sharedPreferencesForTimer = remember {
+                    contextInner.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                }
+                
+                val savedTimerMinutes = remember {
+                    sharedPreferencesForTimer.getInt("sleep_timer_minutes", 15)
+                }
+                
+                var timerSecondsTotal by remember { mutableIntStateOf(savedTimerMinutes * 60) }
+                var timerSecondsLeft by remember { mutableIntStateOf(timerSecondsTotal) }
+                var isTimerRunning by remember { mutableStateOf(false) }
+                var showTimerDialog by remember { mutableStateOf(false) }
+                var timerInputMinutes by remember { mutableStateOf(savedTimerMinutes.toString()) }
+                
+                // Observe both players for playback state
+                var isPlaylistPlaying by remember { mutableStateOf(playlistPlayer.isPlaying) }
+                var isWhiteSoundPlaying by remember { mutableStateOf(whiteSoundPlayer.isPlaying) }
+                
+                DisposableEffect(playlistPlayer) {
+                    val listener = object : Player.Listener {
+                        override fun onIsPlayingChanged(playing: Boolean) {
+                            isPlaylistPlaying = playing
+                        }
+                    }
+                    playlistPlayer.addListener(listener)
+                    isPlaylistPlaying = playlistPlayer.isPlaying
+                    onDispose {
+                        playlistPlayer.removeListener(listener)
+                    }
+                }
+                
+                DisposableEffect(whiteSoundPlayer) {
+                    val listener = object : Player.Listener {
+                        override fun onIsPlayingChanged(playing: Boolean) {
+                            isWhiteSoundPlaying = playing
+                        }
+                    }
+                    whiteSoundPlayer.addListener(listener)
+                    isWhiteSoundPlaying = whiteSoundPlayer.isPlaying
+                    onDispose {
+                        whiteSoundPlayer.removeListener(listener)
+                    }
+                }
+                
+                // Countdown effect for shared timer
+                LaunchedEffect(isTimerRunning) {
+                    if (!isTimerRunning) return@LaunchedEffect
+                    
+                    while (isTimerRunning && timerSecondsLeft > 0) {
+                        delay(1000)
+                        if (isTimerRunning) {
+                            timerSecondsLeft -= 1
+                        }
+                    }
+                    
+                    // Time finished - pause both players
+                    if (timerSecondsLeft <= 0) {
+                        playlistPlayer.pause()
+                        whiteSoundPlayer.pause()
+                        isTimerRunning = false
+                        isPlaylistPlaying = false
+                        isWhiteSoundPlaying = false
+                        timerSecondsLeft = timerSecondsTotal
+                    }
+                }
+                
+                // Start timer when any playback starts
+                LaunchedEffect(isPlaylistPlaying, isWhiteSoundPlaying) {
+                    val isAnyPlaying = isPlaylistPlaying || isWhiteSoundPlaying
+                    if (isAnyPlaying && !isTimerRunning && timerSecondsTotal > 0) {
+                        isTimerRunning = true
+                    } else if (!isAnyPlaying) {
+                        isTimerRunning = false
+                    }
+                }
+                
+                // Format seconds to mm:ss
+                fun formatTime(seconds: Int): String {
+                    val m = seconds / 60
+                    val s = seconds % 60
+                    return "%02d:%02d".format(m, s)
                 }
 
                 // Create session activity pending intent (used by both MediaSession and NotificationManager)
@@ -133,8 +226,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // Create MediaSession for background playback and media controls
-                val mediaSession = remember(player, sessionActivityPendingIntent) {
-                    MediaSession.Builder(contextInner, player)
+                val mediaSession = remember(playlistPlayer, sessionActivityPendingIntent) {
+                    MediaSession.Builder(contextInner, playlistPlayer)
                         .setSessionActivity(sessionActivityPendingIntent)
                         .build()
                 }
@@ -237,11 +330,11 @@ class MainActivity : ComponentActivity() {
                                     )
                                     .build()
                                 playlist.add(item)
-                                player.addMediaItem(item)
+                                playlistPlayer.addMediaItem(item)
                             }
                         }
                         if (playlist.isNotEmpty()) {
-                            player.prepare()
+                            playlistPlayer.prepare()
                         }
                     } else {
                         // If no saved playlist, add all songs in order
@@ -259,10 +352,10 @@ class MainActivity : ComponentActivity() {
                                 )
                                 .build()
                             playlist.add(item)
-                            player.addMediaItem(item)
+                            playlistPlayer.addMediaItem(item)
                         }
                         if (playlist.isNotEmpty()) {
-                            player.prepare()
+                            playlistPlayer.prepare()
                         }
                     }
                     isInitialLoad = false
@@ -287,24 +380,24 @@ class MainActivity : ComponentActivity() {
                 var currentIndex by remember { mutableIntStateOf(-1) }
                 var isPlaying by remember { mutableStateOf(false) }
 
-                // Observe player state changes
-                DisposableEffect(player) {
+                // Observe playlist player state changes
+                DisposableEffect(playlistPlayer) {
                     val listener = object : Player.Listener {
                         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                            currentIndex = player.currentMediaItemIndex
+                            currentIndex = playlistPlayer.currentMediaItemIndex
                         }
 
                         override fun onIsPlayingChanged(isPlaying2: Boolean) {
-                            isPlaying = player.isPlaying
+                            isPlaying = playlistPlayer.isPlaying
                         }
 
                         override fun onPlaybackStateChanged(playbackState: Int) {
-                            isPlaying = player.isPlaying
+                            isPlaying = playlistPlayer.isPlaying
                         }
                     }
-                    player.addListener(listener)
-                    isPlaying = player.isPlaying
-                    currentIndex = player.currentMediaItemIndex
+                    playlistPlayer.addListener(listener)
+                    isPlaying = playlistPlayer.isPlaying
+                    currentIndex = playlistPlayer.currentMediaItemIndex
 
                     // isPlaying 상태를 변경하는 람다를 MainActivity의 프로퍼티에 할당
                     updateIsPlayingState = { newState ->
@@ -312,11 +405,10 @@ class MainActivity : ComponentActivity() {
                     }
 
                     onDispose {
-                        player.removeListener(listener)
-                     //   notificationManager!!.setPlayer(null)
+                        playlistPlayer.removeListener(listener)
+                        whiteSoundPlayer.release()
                         mediaSession.release()
-                        player.release()
-                        //    player = null
+                        playlistPlayer.release()
                         updateIsPlayingState = null // 메모리 누수 방지
                     }
 
@@ -324,26 +416,71 @@ class MainActivity : ComponentActivity() {
 
                 Column(modifier = Modifier
                     .fillMaxSize()) {
-                    // Top bar with theme toggle
-                    Row(
+                    // Top bar with theme toggle and sleep timer
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(16.dp)
                     ) {
-                      //  Text("Baby Lullaby", style = MaterialTheme.typography.titleLarge)
-                        IconButton(onClick = { isDarkTheme = !isDarkTheme }) {
-                            Icon(
-                                imageVector = if (isDarkTheme) Icons.Default.BrightnessHigh else Icons.Default.Brightness2,
-                                contentDescription = if (isDarkTheme) "Switch to light theme" else "Switch to dark theme",
-                                tint = if (isDarkTheme) 
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            //  Text("Baby Lullaby", style = MaterialTheme.typography.titleLarge)
+                            IconButton(onClick = { isDarkTheme = !isDarkTheme }) {
+                                Icon(
+                                    imageVector = if (isDarkTheme) Icons.Default.BrightnessHigh else Icons.Default.Brightness2,
+                                    contentDescription = if (isDarkTheme) "Switch to light theme" else "Switch to dark theme",
+                                    tint = if (isDarkTheme) 
+                                        // Sun icon color when in dark theme - use warm colors
+                                        Color(0xFFFFD700) // Gold/Yellow
+                                    else 
+                                        // Moon icon color when in light theme - use cool colors
+                                        Color(0xFF4A90E2) // Blue
+                                )
+                            }
+                        }
+                        
+                        // Sleep Timer below theme toggle
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .height(64.dp)
+                                .clickable { showTimerDialog = true },
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .wrapContentWidth()
+                                    .fillMaxHeight()
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Timer,
+                                    contentDescription = "Sleep Timer",
+                                    tint = if (isDarkTheme)
                                     // Sun icon color when in dark theme - use warm colors
-                                    Color(0xFFFFD700) // Gold/Yellow
-                                else 
+                                        Color(0xFFFFD700) // Gold/Yellow
+                                    else
                                     // Moon icon color when in light theme - use cool colors
-                                    Color(0xFF4A90E2) // Blue
-                            )
+                                        Color(0xFF4A90E2) // Blue
+                                )
+                                Text(
+                                    text = formatTime(timerSecondsLeft),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = if (isTimerRunning) 
+                                        MaterialTheme.colorScheme.primary 
+                                    else 
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                     
@@ -378,15 +515,15 @@ class MainActivity : ComponentActivity() {
                                 assetFiles = assetFiles,
                                 assetFolder = assetFolder,
                                 playlist = playlist,
-                                player = player,
+                                player = playlistPlayer,
                                 currentIndex = currentIndex,
-                                onAddToPlaylist = { uri -> addToPlaylist(player, playlist, uri) },
-                                onRemoveFromPlaylist = { mediaId -> removeFromPlaylist(player, playlist, mediaId, currentIndex) }
+                                onAddToPlaylist = { uri -> addToPlaylist(playlistPlayer, playlist, uri) },
+                                onRemoveFromPlaylist = { mediaId -> removeFromPlaylist(playlistPlayer, playlist, mediaId, currentIndex) }
                             )
                             1 -> WhiteSoundsPage(
                                 whiteSoundFiles = whiteSoundFiles,
                                 whiteSoundFolder = whiteSoundFolder,
-                                player = player
+                                player = whiteSoundPlayer
                             )
                         }
                     }
@@ -403,7 +540,7 @@ class MainActivity : ComponentActivity() {
                         )
 
                         PlaylistScreen(
-                            player = player,
+                            player = playlistPlayer,
                             playlist = playlist,
                             currentIndex = currentIndex,
                             isPlaying = isPlaying,
@@ -413,6 +550,30 @@ class MainActivity : ComponentActivity() {
                                 .padding(16.dp)
                         )
                     }
+                    
+                    // Sleep Timer Dialog
+                    SleepTimerDialog(
+                        show = showTimerDialog,
+                        timerInputMinutes = timerInputMinutes,
+                        onMinutesChange = { value ->
+                            timerInputMinutes = value.filter { ch -> ch.isDigit() }
+                        },
+                        onConfirm = {
+                            val minutes = timerInputMinutes.toIntOrNull()?.coerceIn(1, 180) ?: 15
+                            timerSecondsTotal = minutes * 60
+                            timerSecondsLeft = timerSecondsTotal
+                            // Save the timer minutes to SharedPreferences
+                            sharedPreferencesForTimer.edit()
+                                .putInt("sleep_timer_minutes", minutes)
+                                .apply()
+                            // Only start timer if already playing
+                            if (!isTimerRunning) {
+                                isTimerRunning = (isPlaylistPlaying || isWhiteSoundPlaying) && timerSecondsTotal > 0
+                            }
+                            showTimerDialog = false
+                        },
+                        onDismiss = { showTimerDialog = false }
+                    )
                 }
             }
         }

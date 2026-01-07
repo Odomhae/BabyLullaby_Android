@@ -20,7 +20,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import kotlinx.coroutines.delay
 
 @Composable
 fun WhiteSoundsPage(
@@ -33,24 +32,40 @@ fun WhiteSoundsPage(
         context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
     }
     
-    // Load saved timer minutes on initialization
-    val savedTimerMinutes = remember {
-        sharedPreferences.getInt("sleep_timer_minutes", 15) // default 15 minutes
+    // Load saved selected media ID
+    val savedSelectedMediaId = remember {
+        sharedPreferences.getString("selected_white_sound", null)
     }
     
-    // Timer state
-    var timerSecondsTotal by remember { mutableIntStateOf(savedTimerMinutes * 60) }
-    var timerSecondsLeft by remember { mutableIntStateOf(timerSecondsTotal) }
-    var isTimerRunning by remember { mutableStateOf(false) }
-    var showTimerDialog by remember { mutableStateOf(false) }
-    var timerInputMinutes by remember { mutableStateOf(savedTimerMinutes.toString()) }
-    
-    // Selected white sound state
-    var selectedMediaId by remember { mutableStateOf<String?>(null) }
+    // Selected white sound state - restore from saved state
+    var selectedMediaId by remember { mutableStateOf<String?>(savedSelectedMediaId) }
     
     // Observe player state for UI updates
     var isPlaying by remember { mutableStateOf(player.isPlaying) }
     var currentMediaId by remember { mutableStateOf(player.currentMediaItem?.mediaId) }
+    
+    // Restore saved selection on first load
+    LaunchedEffect(Unit) {
+        if (savedSelectedMediaId != null && player.mediaItemCount == 0) {
+            // Restore the saved selection
+            val uri = Uri.parse(savedSelectedMediaId)
+            val fileName = uri.lastPathSegment?.substringBeforeLast(".") ?: "Unknown"
+            val mediaItem = MediaItem.Builder()
+                .setUri(uri)
+                .setMediaId(savedSelectedMediaId)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(fileName)
+                        .build()
+                )
+                .build()
+            
+            player.addMediaItem(mediaItem)
+            player.repeatMode = Player.REPEAT_MODE_ONE
+            player.prepare()
+            // Don't auto-play, just restore the selection state
+        }
+    }
     
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -70,36 +85,6 @@ fun WhiteSoundsPage(
             player.removeListener(listener)
         }
     }
-    
-    // Countdown effect
-    LaunchedEffect(isTimerRunning) {
-        if (!isTimerRunning) return@LaunchedEffect
-        
-        while (isTimerRunning && timerSecondsLeft > 0) {
-            delay(1000)
-            if (isTimerRunning) { // Check again after delay
-                timerSecondsLeft -= 1
-            }
-        }
-        
-        // Time finished
-        if (timerSecondsLeft <= 0) {
-            player.pause()
-            player.clearMediaItems()
-            isTimerRunning = false
-            selectedMediaId = null
-            currentMediaId = null
-            isPlaying = false
-            timerSecondsLeft = timerSecondsTotal
-        }
-    }
-    
-    // Format seconds to mm:ss
-    fun formatTime(seconds: Int): String {
-        val m = seconds / 60
-        val s = seconds % 60
-        return "%02d:%02d".format(m, s)
-    }
 
     Column(
         modifier = Modifier
@@ -107,39 +92,6 @@ fun WhiteSoundsPage(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Timer display on top - clickable to set timer
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .clickable { showTimerDialog = true },
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Sleep Timer",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = formatTime(timerSecondsLeft),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (isTimerRunning) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier
@@ -160,14 +112,16 @@ fun WhiteSoundsPage(
                         .aspectRatio(1f)
                         .clickable {
                             if (isCurrentlySelected) {
-                                // Unselect: stop playing and reset timer
+                                // Unselect: stop playing
                                 player.pause()
                                 player.clearMediaItems()
-                                isTimerRunning = false
                                 selectedMediaId = null
                                 currentMediaId = null
                                 isPlaying = false
-                                timerSecondsLeft = timerSecondsTotal
+                                // Clear saved selection
+                                sharedPreferences.edit()
+                                    .remove("selected_white_sound")
+                                    .apply()
                             } else {
                                 // Select: play the white sound file and start timer
                                 val uri = Uri.parse(mediaId)
@@ -189,10 +143,11 @@ fun WhiteSoundsPage(
                                 player.prepare()
                                 player.play()
                                 
-                                // Start timer
+                                // Save selected media ID
                                 selectedMediaId = mediaId
-                                timerSecondsLeft = timerSecondsTotal
-                                isTimerRunning = timerSecondsTotal > 0
+                                sharedPreferences.edit()
+                                    .putString("selected_white_sound", mediaId)
+                                    .apply()
                             }
                         },
                     colors = CardDefaults.cardColors(
@@ -237,29 +192,5 @@ fun WhiteSoundsPage(
             }
         }
     }
-    
-    // Timer dialog
-    SleepTimerDialog(
-        show = showTimerDialog,
-        timerInputMinutes = timerInputMinutes,
-        onMinutesChange = { value ->
-            timerInputMinutes = value.filter { ch -> ch.isDigit() }
-        },
-        onConfirm = {
-            val minutes = timerInputMinutes.toIntOrNull()?.coerceIn(1, 180) ?: 15
-            timerSecondsTotal = minutes * 60
-            timerSecondsLeft = timerSecondsTotal
-            // Save the timer minutes to SharedPreferences
-            sharedPreferences.edit()
-                .putInt("sleep_timer_minutes", minutes)
-                .apply()
-            // Only start timer if already playing
-            if (!isTimerRunning) {
-                isTimerRunning = isPlaying && timerSecondsTotal > 0
-            }
-            showTimerDialog = false
-        },
-        onDismiss = { showTimerDialog = false }
-    )
 }
 
