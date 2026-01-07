@@ -29,6 +29,7 @@ import android.content.Intent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
 import androidx.core.app.NotificationManagerCompat
 import androidx.media3.common.MediaMetadata
 import com.odom.lullaby.ui.theme.MyApplicationTheme
@@ -38,7 +39,14 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 private const val PLAYBACK_NOTIFICATION_ID = 1
 private const val CHANNEL_ID = "playback_channel"
 
+@UnstableApi
 class MainActivity : ComponentActivity() {
+
+    private var notificationManager: PlayerNotificationManager? = null
+
+    // isPlaying 상태를 업데이트하는 람다 함수를 저장할 변수 추가
+    private var updateIsPlayingState: ((Boolean) -> Unit)? = null
+
     @androidx.annotation.OptIn(UnstableApi::class)
     @OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,21 +95,21 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = false) {
                 val contextInner = LocalContext.current
 
-                // Create notification channel for Android O and above
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    val channel = android.app.NotificationChannel(
-                        CHANNEL_ID,
-                        "Playback Controls",
-                        NotificationManager.IMPORTANCE_LOW
-                    ).apply {
-                        description = "Media playback controls"
-                        setShowBadge(false)
-                        lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-                    }
-
-                    val notificationManager = contextInner.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    notificationManager.createNotificationChannel(channel)
-                }
+//                // Create notification channel for Android O and above
+//                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+//                    val channel = android.app.NotificationChannel(
+//                        CHANNEL_ID,
+//                        "Playback Controls",
+//                        NotificationManager.IMPORTANCE_LOW
+//                    ).apply {
+//                        description = "Media playback controls"
+//                        setShowBadge(false)
+//                        lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+//                    }
+//
+//                    val notificationManager = contextInner.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+//                    notificationManager.createNotificationChannel(channel)
+//                }
 
                 // Create player with proper lifecycle management
                 val player = remember {
@@ -132,47 +140,47 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // Create PlayerNotificationManager for notification and lock screen controls
-                val notificationManager : PlayerNotificationManager = remember(mediaSession, sessionActivityPendingIntent) {
-                    PlayerNotificationManager.Builder(
-                        contextInner,
-                        PLAYBACK_NOTIFICATION_ID,
-                        CHANNEL_ID
-                    )
-                    .setMediaDescriptionAdapter(
-                        object : PlayerNotificationManager.MediaDescriptionAdapter {
-                            override fun getCurrentContentTitle(player: Player): CharSequence {
-                                val mediaItem = player.currentMediaItem
-                                val title = mediaItem?.mediaMetadata?.title?.toString()
-                                if (!title.isNullOrEmpty()) return title
-                                val fileName = mediaItem?.mediaId?.let {
-                                    Uri.parse(it).lastPathSegment?.substringBeforeLast(".")
-                                }
-                                return fileName ?: "Unknown"
-                            }
-
-                            override fun getCurrentContentText(player: Player): CharSequence? {
-                                return player.currentMediaItem?.mediaMetadata?.artist?.toString()
-                                    ?: "Audio Player"
-                            }
-
-                            override fun getCurrentLargeIcon(
-                                player: Player,
-                                callback: PlayerNotificationManager.BitmapCallback
-                            ): android.graphics.Bitmap? {
-                                return null
-                            }
-
-                            override fun createCurrentContentIntent(player: Player): PendingIntent? {
-                                return sessionActivityPendingIntent
-                            }
-                        }
-                    )
-                    .build()
-                    .apply {
-                        setMediaSessionToken(mediaSession.sessionCompatToken)
-                        setPlayer(player)
-                    }
-                }
+//                 notificationManager  = remember(mediaSession, sessionActivityPendingIntent) {
+//                    PlayerNotificationManager.Builder(
+//                        contextInner,
+//                        PLAYBACK_NOTIFICATION_ID,
+//                        CHANNEL_ID
+//                    )
+//                    .setMediaDescriptionAdapter(
+//                        object : PlayerNotificationManager.MediaDescriptionAdapter {
+//                            override fun getCurrentContentTitle(player: Player): CharSequence {
+//                                val mediaItem = player.currentMediaItem
+//                                val title = mediaItem?.mediaMetadata?.title?.toString()
+//                                if (!title.isNullOrEmpty()) return title
+//                                val fileName = mediaItem?.mediaId?.let {
+//                                    Uri.parse(it).lastPathSegment?.substringBeforeLast(".")
+//                                }
+//                                return fileName ?: "Unknown"
+//                            }
+//
+//                            override fun getCurrentContentText(player: Player): CharSequence? {
+//                                return player.currentMediaItem?.mediaMetadata?.artist?.toString()
+//                                    ?: "Audio Player"
+//                            }
+//
+//                            override fun getCurrentLargeIcon(
+//                                player: Player,
+//                                callback: PlayerNotificationManager.BitmapCallback
+//                            ): android.graphics.Bitmap? {
+//                                return null
+//                            }
+//
+//                            override fun createCurrentContentIntent(player: Player): PendingIntent? {
+//                                return sessionActivityPendingIntent
+//                            }
+//                        }
+//                    )
+//                    .build()
+//                    .apply {
+//                        setMediaSessionToken(mediaSession.sessionCompatToken)
+//                        setPlayer(player)
+//                    }
+//                }
 
                 val playlist = remember { mutableStateListOf<MediaItem>() }
                 val sharedPreferences = remember {
@@ -208,7 +216,7 @@ class MainActivity : ComponentActivity() {
                 
                 // Pager state for ViewPager-like functionality
                 val pagerState = rememberPagerState(pageCount = { 2 })
-                val tabTitles = listOf("Playlist", "White Sounds")
+                val tabTitles = listOf(stringResource(R.string.lullaby), stringResource(R.string.white_noise))
 
                 // Load saved playlist on startup
                 LaunchedEffect(Unit) {
@@ -281,29 +289,35 @@ class MainActivity : ComponentActivity() {
 
                 // Observe player state changes
                 DisposableEffect(player) {
-                val listener = object : Player.Listener {
-                    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                        currentIndex = player.currentMediaItemIndex
-                    }
+                    val listener = object : Player.Listener {
+                        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                            currentIndex = player.currentMediaItemIndex
+                        }
 
-                    override fun onIsPlayingChanged(isPlaying2: Boolean) {
-                        isPlaying = player.isPlaying
-                    }
+                        override fun onIsPlayingChanged(isPlaying2: Boolean) {
+                            isPlaying = player.isPlaying
+                        }
 
-                    override fun onPlaybackStateChanged(playbackState: Int) {
-                        isPlaying = player.isPlaying
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            isPlaying = player.isPlaying
+                        }
                     }
-                }
-                player.addListener(listener)
-                isPlaying = player.isPlaying
-                currentIndex = player.currentMediaItemIndex
+                    player.addListener(listener)
+                    isPlaying = player.isPlaying
+                    currentIndex = player.currentMediaItemIndex
+
+                    // isPlaying 상태를 변경하는 람다를 MainActivity의 프로퍼티에 할당
+                    updateIsPlayingState = { newState ->
+                        isPlaying = newState
+                    }
 
                     onDispose {
                         player.removeListener(listener)
-                        notificationManager.setPlayer(null)
+                     //   notificationManager!!.setPlayer(null)
                         mediaSession.release()
                         player.release()
                         //    player = null
+                        updateIsPlayingState = null // 메모리 누수 방지
                     }
 
                 }
@@ -383,7 +397,7 @@ class MainActivity : ComponentActivity() {
 
                         // Playlist controls at the bottom
                         Text(
-                            "재생목록",
+                            stringResource(R.string.playlist),
                             style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )

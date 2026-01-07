@@ -2,6 +2,7 @@ package com.odom.lullaby
 
 import android.content.Context
 import android.net.Uri
+import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,9 +19,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.delay
 
+@OptIn(UnstableApi::class)
 @Composable
 fun PlaylistPage(
     assetFiles: List<String>,
@@ -79,8 +82,7 @@ fun PlaylistPage(
         // Time finished
         if (timerSecondsLeft <= 0) {
             player.pause()
-            player.clearMediaItems()
-            playlist.clear()
+           // player.clearMediaItems()
             isTimerRunning = false
             isPlaying = false
             timerSecondsLeft = timerSecondsTotal
