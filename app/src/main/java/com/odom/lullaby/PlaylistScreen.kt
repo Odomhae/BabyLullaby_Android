@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -40,8 +41,9 @@ fun PlaylistScreen(
 
         // 제어 버튼들 (아이콘으로 표시)
         Row(
-            horizontalArrangement = Arrangement.Center, //Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
+            horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
                 onClick = { player.seekToPreviousMediaItem() },
@@ -49,7 +51,9 @@ fun PlaylistScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.SkipPrevious,
+                    modifier = Modifier.size(40.dp),
                     contentDescription = "이전곡"
+
                 )
             }
 
@@ -58,6 +62,7 @@ fun PlaylistScreen(
             }) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    modifier = Modifier.size(40.dp),
                     contentDescription = if (isPlaying) "일시정지" else "재생"
                 )
             }
@@ -67,6 +72,7 @@ fun PlaylistScreen(
                 IconButton(onClick = { player.stop() }) {
                     Icon(
                         imageVector = Icons.Default.Stop,
+                        modifier = Modifier.size(40.dp),
                         contentDescription = "정지"
                     )
                 }
@@ -78,6 +84,7 @@ fun PlaylistScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.SkipNext,
+                    modifier = Modifier.size(40.dp),
                     contentDescription = "다음곡"
                 )
             }
