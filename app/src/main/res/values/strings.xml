@@ -9,4 +9,8 @@
     <string name="play">Play</string>
     <string name="playlist">Playlist</string>
     <string name="cancel">Cancel</string>
+
+    <string name="no_playing_song">No track playing</string>
+
+
 </resources>

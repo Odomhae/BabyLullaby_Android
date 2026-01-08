@@ -96,7 +96,8 @@ fun WhiteSoundsPage(
             columns = GridCells.Fixed(2),
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .navigationBarsPadding() ,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {

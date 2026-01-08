@@ -97,22 +97,6 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = false) {
                 val contextInner = LocalContext.current
 
-//                // Create notification channel for Android O and above
-//                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-//                    val channel = android.app.NotificationChannel(
-//                        CHANNEL_ID,
-//                        "Playback Controls",
-//                        NotificationManager.IMPORTANCE_LOW
-//                    ).apply {
-//                        description = "Media playback controls"
-//                        setShowBadge(false)
-//                        lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-//                    }
-//
-//                    val notificationManager = contextInner.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-//                    notificationManager.createNotificationChannel(channel)
-//                }
-
                 // Create players with proper lifecycle management
                 val playlistPlayer = remember {
                     ExoPlayer.Builder(contextInner).build().apply {
@@ -231,49 +215,6 @@ class MainActivity : ComponentActivity() {
                         .setSessionActivity(sessionActivityPendingIntent)
                         .build()
                 }
-
-                // Create PlayerNotificationManager for notification and lock screen controls
-//                 notificationManager  = remember(mediaSession, sessionActivityPendingIntent) {
-//                    PlayerNotificationManager.Builder(
-//                        contextInner,
-//                        PLAYBACK_NOTIFICATION_ID,
-//                        CHANNEL_ID
-//                    )
-//                    .setMediaDescriptionAdapter(
-//                        object : PlayerNotificationManager.MediaDescriptionAdapter {
-//                            override fun getCurrentContentTitle(player: Player): CharSequence {
-//                                val mediaItem = player.currentMediaItem
-//                                val title = mediaItem?.mediaMetadata?.title?.toString()
-//                                if (!title.isNullOrEmpty()) return title
-//                                val fileName = mediaItem?.mediaId?.let {
-//                                    Uri.parse(it).lastPathSegment?.substringBeforeLast(".")
-//                                }
-//                                return fileName ?: "Unknown"
-//                            }
-//
-//                            override fun getCurrentContentText(player: Player): CharSequence? {
-//                                return player.currentMediaItem?.mediaMetadata?.artist?.toString()
-//                                    ?: "Audio Player"
-//                            }
-//
-//                            override fun getCurrentLargeIcon(
-//                                player: Player,
-//                                callback: PlayerNotificationManager.BitmapCallback
-//                            ): android.graphics.Bitmap? {
-//                                return null
-//                            }
-//
-//                            override fun createCurrentContentIntent(player: Player): PendingIntent? {
-//                                return sessionActivityPendingIntent
-//                            }
-//                        }
-//                    )
-//                    .build()
-//                    .apply {
-//                        setMediaSessionToken(mediaSession.sessionCompatToken)
-//                        setPlayer(player)
-//                    }
-//                }
 
                 val playlist = remember { mutableStateListOf<MediaItem>() }
                 val sharedPreferences = remember {
@@ -415,39 +356,37 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Column(modifier = Modifier
-                    .fillMaxSize()) {
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .background(Color.White)) {
                     // Top bar with theme toggle and sleep timer
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween, // 양 끝으로 배치
+                        verticalAlignment = Alignment.CenterVertically // 수직 중앙 정렬
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            //  Text("Baby Lullaby", style = MaterialTheme.typography.titleLarge)
-                            IconButton(onClick = { isDarkTheme = !isDarkTheme }) {
-                                Icon(
-                                    imageVector = if (isDarkTheme) Icons.Default.BrightnessHigh else Icons.Default.Brightness2,
-                                    contentDescription = if (isDarkTheme) "Switch to light theme" else "Switch to dark theme",
-                                    tint = if (isDarkTheme) 
-                                        // Sun icon color when in dark theme - use warm colors
-                                        Color(0xFFFFD700) // Gold/Yellow
-                                    else 
-                                        // Moon icon color when in light theme - use cool colors
-                                        Color(0xFF4A90E2) // Blue
-                                )
-                            }
+                        // 1. 왼쪽: 테마 토글 버튼
+                        IconButton(onClick = {isDarkTheme = !isDarkTheme}){
+                            Icon(
+                                imageVector = if (isDarkTheme) Icons.Default.BrightnessHigh else Icons.Default.Brightness2,
+                                contentDescription = if (isDarkTheme) "Switch to light theme" else "Switch to dark theme",
+                                modifier = Modifier.size(40.dp),
+                                tint = if (isDarkTheme)
+                                // Sun icon color when in dark theme - use warm colors
+                                    Color(0xFFFFD700) // Gold/Yellow
+                                else
+                                // Moon icon color when in light theme - use cool colors
+                                    Color(0xFF4A90E2) // Blue
+                            )
                         }
                         
                         // Sleep Timer below theme toggle
-                        Spacer(modifier = Modifier.height(8.dp))
                         Card(
                             modifier = Modifier
                                 .wrapContentWidth()
-                                .height(64.dp)
+                                .height(50.dp)
                                 .clickable { showTimerDialog = true },
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -546,8 +485,8 @@ class MainActivity : ComponentActivity() {
                             isPlaying = isPlaying,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(200.dp)
-                                .padding(16.dp)
+                                .height(180.dp)
+                                .padding(horizontal = 16.dp)
                         )
                     }
                     

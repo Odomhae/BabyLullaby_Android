@@ -9,4 +9,7 @@
     <string name="play">재생</string>
     <string name="playlist">재생목록</string>
     <string name="cancel">취소</string>
+
+    <string name="no_playing_song">재생 중인 곡 없음</string>
+
 </resources>
