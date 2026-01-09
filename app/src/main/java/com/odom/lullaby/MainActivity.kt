@@ -483,6 +483,10 @@ class MainActivity : ComponentActivity() {
                             playlist = playlist,
                             currentIndex = currentIndex,
                             isPlaying = isPlaying,
+                            onResetTimer = {
+                                timerSecondsLeft = timerSecondsTotal
+                                isTimerRunning = false
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(180.dp)

@@ -12,12 +12,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Blue, // Soft lavender
-    secondary = PurpleGrey80, // Muted purple-grey
-    tertiary = Pink80, // Soft pink
+    primary = Blue, // Soft lavender → 메인 블루
+    secondary = Color(0xFF4A90E2), // 밝은 블루 (퍼플 대신)
+    tertiary = Color(0xFF5DADE2), // 소프트 하늘색 블루
     background = Color(0xFF0F0F1A), // Very dark blue-grey background
     surface = Color(0xFF1A1A26), // Dark surface with slight blue tint
-    surfaceVariant = SurfaceVariant80, // Lighter variant for cards
+    surfaceVariant = Color(0xFF2C3E50), // 블루-그레이 카드 배경
     onPrimary = Color(0xFF1A1A26), // Dark text on light primary
     onSecondary = Color(0xFF1A1A26), // Dark text on light secondary
     onTertiary = Color(0xFF1A1A26), // Dark text on light tertiary
@@ -29,12 +29,12 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = BlueDark, // Deeper lavender
-    secondary = PurpleGrey40, // Muted purple-grey
-    tertiary = Pink40, // Soft dusty pink
+    primary = BlueDark, // Deep blue
+    secondary = Color(0xFF1976D2), // 중간 블루 (퍼플 대신)
+    tertiary = Color(0xFF64B5F6), // 라이트 블루
     background = Color(0xFFFFFBFE), // Warm white background
     surface = Color(0xFFF8F8FA), // Very light grey surface
-    surfaceVariant = SurfaceVariant40, // Light blue-grey variant
+    surfaceVariant = Color(0xFFE3F2FD), // 밝은 블루-그레이 카드 배경
     onPrimary = Color.White, // White text on dark primary
     onSecondary = Color.White, // White text on dark secondary
     onTertiary = Color.White, // White text on dark tertiary

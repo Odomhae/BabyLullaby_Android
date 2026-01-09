@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
+import com.google.android.exoplayer2.Player
 
 @Composable
 fun PlaylistScreen(
@@ -22,6 +23,7 @@ fun PlaylistScreen(
     playlist: SnapshotStateList<MediaItem>,
     currentIndex: Int,
     isPlaying: Boolean,
+    onResetTimer: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentItem = playlist.getOrNull(currentIndex)
@@ -57,9 +59,20 @@ fun PlaylistScreen(
                 )
             }
 
-            IconButton(onClick = {
-                if (isPlaying) player.pause() else player.play()
-            }) {
+            IconButton(
+                onClick = {
+                  //  if (isPlaying) player.pause() else player.play()
+                    if (isPlaying) {
+                        player.pause()
+                    } else {
+                        if (player.playbackState == Player.STATE_IDLE) {
+                            player.prepare()
+                        }
+                        player.play()
+                    }
+                },
+                enabled = playlist.isNotEmpty()
+            ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     modifier = Modifier.size(40.dp),
@@ -67,9 +80,12 @@ fun PlaylistScreen(
                 )
             }
 
-            // isPlaying이 true일 때만 정지 버튼을 표시합니다.
-            if (isPlaying) {
-                IconButton(onClick = { player.stop() }) {
+            // 플레이리스트에 아이템이 있고 플레이어가 정지 상태가 아닐 때 정지 버튼을 표시합니다.
+            if (playlist.isNotEmpty() && player.playbackState != Player.STATE_IDLE) {
+                IconButton(onClick = { 
+                    player.stop()
+                    onResetTimer()
+                }) {
                     Icon(
                         imageVector = Icons.Default.Stop,
                         modifier = Modifier.size(40.dp),

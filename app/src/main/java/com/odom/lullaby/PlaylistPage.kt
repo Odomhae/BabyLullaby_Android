@@ -14,6 +14,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -56,7 +57,7 @@ fun PlaylistPage(
                         },
                     colors = CardDefaults.cardColors(
                         containerColor = if (isInPlaylist)
-                            MaterialTheme.colorScheme.primaryContainer
+                            MaterialTheme.colorScheme.surfaceVariant
                         else
                             MaterialTheme.colorScheme.surface
                     )
