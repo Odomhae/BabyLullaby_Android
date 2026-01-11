@@ -28,6 +28,7 @@ fun WhiteSoundsPage(
     whiteSoundFiles: List<String>,
     whiteSoundFolder: String,
     player: ExoPlayer,
+    onPlay: () -> Unit,
     onResetTimer: () -> Unit = {}, // 1. 타이머 초기화 콜백 추가
 ) {
     val context = LocalContext.current
@@ -78,6 +79,14 @@ fun WhiteSoundsPage(
             
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 currentMediaId = mediaItem?.mediaId
+
+                // --- 추가된 로직: 재생되는 곡이 바뀌었을 때 처리 ---
+                // 현재 재생되는 미디어가 없거나, 재생되는 미디어가 내가 선택한 소음과 다르면 선택 상태 해제
+                if (mediaItem == null || mediaItem.mediaId != selectedMediaId) {
+                    selectedMediaId = null
+                    // SharedPreferences에서도 삭제하여 상태 유지 방지
+                    sharedPreferences.edit().remove("selected_white_sound").apply()
+                }
             }
         }
         player.addListener(listener)
@@ -145,6 +154,7 @@ fun WhiteSoundsPage(
                                 // Set repeat mode to ONE to loop this single file
                                 player.repeatMode = Player.REPEAT_MODE_ONE
                                 player.prepare()
+                                onPlay() // 재생하기 전에 알림 연결 로직 호출
                                 player.play()
                                 
                                 // Save selected media ID
@@ -155,7 +165,7 @@ fun WhiteSoundsPage(
                             }
                         },
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isCurrentlySelected)
+                        containerColor = if (isCurrentlySelected && isCurrentlyPlaying)
                             MaterialTheme.colorScheme.primaryContainer
                         else
                             MaterialTheme.colorScheme.surfaceVariant

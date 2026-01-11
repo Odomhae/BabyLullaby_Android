@@ -23,6 +23,7 @@ fun PlaylistScreen(
     playlist: SnapshotStateList<MediaItem>,
     currentIndex: Int,
     isPlaying: Boolean,
+    onPlay: () -> Unit,
     onResetTimer: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -71,6 +72,13 @@ fun PlaylistScreen(
                         if (player.playbackState == Player.STATE_IDLE) {
                             player.prepare()
                         }
+                        // 정지 상태(STATE_IDLE)에서 재생할 때는 항상 처음부터 재생
+                        // 또는 재생이 끝난 상태(STATE_ENDED)에서도 처음부터 재생
+                        if (player.playbackState == Player.STATE_IDLE || 
+                            player.playbackState == Player.STATE_ENDED) {
+                            player.seekTo(0)
+                        }
+                        onPlay()
                         player.play()
                     }
                 },
@@ -84,9 +92,10 @@ fun PlaylistScreen(
             }
 
             // 플레이리스트에 아이템이 있고 플레이어가 정지 상태가 아닐 때 정지 버튼을 표시합니다.
-            if (playlist.isNotEmpty() && player.playbackState != Player.STATE_IDLE) {
+            if (playlist.isNotEmpty() /*&& player.playbackState != Player.STATE_IDLE*/) {
                 IconButton(onClick = { 
                     player.stop()
+                    player.seekTo(0) // 정지 후 처음 위치로 이동
                     onResetTimer()
                 }) {
                     Icon(

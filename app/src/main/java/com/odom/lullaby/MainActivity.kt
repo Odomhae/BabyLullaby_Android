@@ -41,7 +41,8 @@ import kotlinx.coroutines.delay
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.android.gms.ads.MobileAds
 
-private const val PLAYBACK_NOTIFICATION_ID = 1
+private const val PLAYLIST_NOTIFICATION_ID = 1
+private const val WHITE_SOUND_NOTIFICATION_ID = 2
 private const val CHANNEL_ID = "playback_channel"
 
 @UnstableApi
@@ -105,6 +106,26 @@ class MainActivity : ComponentActivity() {
             
             MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = false) {
                 val contextInner = LocalContext.current
+
+                // Create notification channel for Android O and above
+                LaunchedEffect(Unit) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        val channel = android.app.NotificationChannel(
+                            CHANNEL_ID,
+                            "Playback Controls",
+                            NotificationManager.IMPORTANCE_LOW
+                        ).apply {
+                            description = "Media playback controls"
+                            setShowBadge(false)
+                            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                            setSound(null, null) // 소리 없음
+                            enableVibration(false) // 진동 없음
+                        }
+
+                        val notificationManager = contextInner.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                        notificationManager.createNotificationChannel(channel)
+                    }
+                }
 
                 // Create players with proper lifecycle management
                 val playlistPlayer = remember {
@@ -219,10 +240,102 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // Create MediaSession for background playback and media controls
-                val mediaSession = remember(playlistPlayer, sessionActivityPendingIntent) {
+                val playlistMediaSession = remember(playlistPlayer, sessionActivityPendingIntent) {
                     MediaSession.Builder(contextInner, playlistPlayer)
+                        .setId("playlist_session")
                         .setSessionActivity(sessionActivityPendingIntent)
                         .build()
+                }
+                
+                val whiteSoundMediaSession = remember(whiteSoundPlayer, sessionActivityPendingIntent) {
+                    MediaSession.Builder(contextInner, whiteSoundPlayer)
+                        .setId("whitesound_session")
+                        .setSessionActivity(sessionActivityPendingIntent)
+                        .build()
+                }
+
+                // Create PlayerNotificationManager for playlist player
+                val playlistNotificationManager = remember(playlistMediaSession, sessionActivityPendingIntent) {
+                    PlayerNotificationManager.Builder(
+                        contextInner,
+                        PLAYLIST_NOTIFICATION_ID,
+                        CHANNEL_ID
+                    )
+                    .setMediaDescriptionAdapter(
+                        object : PlayerNotificationManager.MediaDescriptionAdapter {
+                            override fun getCurrentContentTitle(player: Player): CharSequence {
+                                val mediaItem = player.currentMediaItem
+                                val title = mediaItem?.mediaMetadata?.title?.toString()
+                                if (!title.isNullOrEmpty()) return title
+                                val fileName = mediaItem?.mediaId?.let {
+                                    Uri.parse(it).lastPathSegment?.substringBeforeLast(".")
+                                }
+                                return fileName ?: "Lullaby"
+                            }
+
+                            override fun getCurrentContentText(player: Player): CharSequence? {
+                                return "Baby Lullaby"
+                            }
+
+                            override fun getCurrentLargeIcon(
+                                player: Player,
+                                callback: PlayerNotificationManager.BitmapCallback
+                            ): android.graphics.Bitmap? {
+                                return null
+                            }
+
+                            override fun createCurrentContentIntent(player: Player): PendingIntent? {
+                                return sessionActivityPendingIntent
+                            }
+                        }
+                    )
+                    .build()
+                    .apply {
+                        setMediaSessionToken(playlistMediaSession.sessionCompatToken)
+                        setPlayer(playlistPlayer)
+                    }
+                }
+                
+                // Create PlayerNotificationManager for white sound player
+                val whiteSoundNotificationManager = remember(whiteSoundMediaSession, sessionActivityPendingIntent) {
+                    PlayerNotificationManager.Builder(
+                        contextInner,
+                        WHITE_SOUND_NOTIFICATION_ID,
+                        CHANNEL_ID
+                    )
+                    .setMediaDescriptionAdapter(
+                        object : PlayerNotificationManager.MediaDescriptionAdapter {
+                            override fun getCurrentContentTitle(player: Player): CharSequence {
+                                val mediaItem = player.currentMediaItem
+                                val title = mediaItem?.mediaMetadata?.title?.toString()
+                                if (!title.isNullOrEmpty()) return title
+                                val fileName = mediaItem?.mediaId?.let {
+                                    Uri.parse(it).lastPathSegment?.substringBeforeLast(".")
+                                }
+                                return fileName ?: "White Sound"
+                            }
+
+                            override fun getCurrentContentText(player: Player): CharSequence? {
+                                return "White Noise"
+                            }
+
+                            override fun getCurrentLargeIcon(
+                                player: Player,
+                                callback: PlayerNotificationManager.BitmapCallback
+                            ): android.graphics.Bitmap? {
+                                return null
+                            }
+
+                            override fun createCurrentContentIntent(player: Player): PendingIntent? {
+                                return sessionActivityPendingIntent
+                            }
+                        }
+                    )
+                    .build()
+                    .apply {
+                        setMediaSessionToken(whiteSoundMediaSession.sessionCompatToken)
+                        setPlayer(whiteSoundPlayer)
+                    }
                 }
 
                 val playlist = remember { mutableStateListOf<MediaItem>() }
@@ -356,8 +469,11 @@ class MainActivity : ComponentActivity() {
 
                     onDispose {
                         playlistPlayer.removeListener(listener)
+                        playlistNotificationManager.setPlayer(null)
+                        whiteSoundNotificationManager.setPlayer(null)
                         whiteSoundPlayer.release()
-                        mediaSession.release()
+                        playlistMediaSession.release()
+                        whiteSoundMediaSession.release()
                         playlistPlayer.release()
                         updateIsPlayingState = null // 메모리 누수 방지
                     }
@@ -465,16 +581,38 @@ class MainActivity : ComponentActivity() {
                                 playlist = playlist,
                                 player = playlistPlayer,
                                 currentIndex = currentIndex,
-                                onAddToPlaylist = { uri -> addToPlaylist(playlistPlayer, playlist, uri) },
+                                onAddToPlaylist = { uri -> 
+                                    // WhiteSound 재생 중지 및 notification 제거
+                                    if (whiteSoundPlayer.isPlaying) {
+                                        whiteSoundPlayer.pause()
+                                        whiteSoundPlayer.clearMediaItems()
+                                        whiteSoundNotificationManager.setPlayer(null)
+                                    }
+                                    addToPlaylist(playlistPlayer, playlist, uri)
+                                    // 재생 시작 시 notification 활성화
+                                    if (playlistPlayer.isPlaying) {
+                                        playlistNotificationManager.setPlayer(playlistPlayer)
+                                    }
+                                },
                                 onRemoveFromPlaylist = { mediaId -> removeFromPlaylist(playlistPlayer, playlist, mediaId, currentIndex) }
                             )
                             1 -> WhiteSoundsPage(
                                 whiteSoundFiles = whiteSoundFiles,
                                 whiteSoundFolder = whiteSoundFolder,
                                 player = whiteSoundPlayer,
+                                onPlay = {
+                                    // Playlist 재생 중지 및 notification 제거
+                                    if (playlistPlayer.isPlaying) {
+                                        playlistPlayer.pause()
+                                        playlistNotificationManager.setPlayer(null)
+                                    }
+                                    // 알림 관리자에 플레이어를 다시 연결하여 알림을 활성화함
+                                    whiteSoundNotificationManager.setPlayer(whiteSoundPlayer)
+                                },
                                 onResetTimer = {
                                     timerSecondsLeft = timerSecondsTotal
                                     isTimerRunning = false
+                                    whiteSoundNotificationManager.setPlayer(null)
                                 }
                             )
                         }
@@ -496,9 +634,21 @@ class MainActivity : ComponentActivity() {
                             playlist = playlist,
                             currentIndex = currentIndex,
                             isPlaying = isPlaying,
+                            onPlay = {
+                                // WhiteSound 재생 중지 및 notification 제거
+                                if (whiteSoundPlayer.isPlaying) {
+                                    whiteSoundPlayer.pause()
+                                    whiteSoundPlayer.clearMediaItems()
+                                    whiteSoundNotificationManager.setPlayer(null)
+                                }
+                                // 알림 관리자에 플레이어를 다시 연결하여 알림을 활성화함
+                                playlistNotificationManager.setPlayer(playlistPlayer)
+                            },
                             onResetTimer = {
                                 timerSecondsLeft = timerSecondsTotal
                                 isTimerRunning = false
+                                playlistNotificationManager.setPlayer(null)
+
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
