@@ -26,6 +26,8 @@ import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerNotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,6 +39,7 @@ import com.odom.lullaby.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.google.android.gms.ads.MobileAds
 
 private const val PLAYBACK_NOTIFICATION_ID = 1
 private const val CHANNEL_ID = "playback_channel"
@@ -54,10 +57,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // AdMob 초기화
+        MobileAds.initialize(this) {}
+
+        // 배터리 최적화 제외 요청 호출
+        //requestIgnoreBatteryOptimizations()
+
         enableEdgeToEdge()
 
         setContent {
-            Modifier.systemBarsPadding().background(Color.Gray)
+            Modifier.systemBarsPadding()
 
             val context = LocalContext.current
             val sharedPreferencesForTheme = remember {
@@ -462,14 +471,18 @@ class MainActivity : ComponentActivity() {
                             1 -> WhiteSoundsPage(
                                 whiteSoundFiles = whiteSoundFiles,
                                 whiteSoundFolder = whiteSoundFolder,
-                                player = whiteSoundPlayer
+                                player = whiteSoundPlayer,
+                                onResetTimer = {
+                                    timerSecondsLeft = timerSecondsTotal
+                                    isTimerRunning = false
+                                }
                             )
                         }
                     }
 
                     // Show PlaylistScreen only when playlist page is selected
                     if (pagerState.currentPage == 0) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         // Playlist controls at the bottom
                         Text(
@@ -489,11 +502,14 @@ class MainActivity : ComponentActivity() {
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(180.dp)
+                                .height(100.dp)
                                 .padding(horizontal = 16.dp)
                         )
                     }
-                    
+
+                    // 하단 광고 배너 추가
+                    BannerAdView(modifier = Modifier.fillMaxWidth().navigationBarsPadding())
+
                     // Sleep Timer Dialog
                     SleepTimerDialog(
                         show = showTimerDialog,
@@ -521,4 +537,26 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+
+//    private fun requestIgnoreBatteryOptimizations() {
+//        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+//        val packageName = packageName
+//
+//        // 이미 최적화 제외 대상인지 확인
+//        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+//            try {
+//                // 사용자에게 설정을 요청하는 인텐트 (이 작업은 배터리 사용량 최적화 목록으로 보냅니다)
+//                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+//                    data = Uri.parse("package:$packageName")
+//                }
+//                startActivity(intent)
+//            } catch (e: Exception) {
+//                // 일부 기기나 버전에서 인텐트가 지원되지 않을 경우를 대비
+//                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+//                startActivity(intent)
+//            }
+//        }
+//    }
+
 }

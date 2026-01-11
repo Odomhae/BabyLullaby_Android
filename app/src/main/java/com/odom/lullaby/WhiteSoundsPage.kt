@@ -2,12 +2,14 @@ package com.odom.lullaby
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Forest
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,7 +27,8 @@ import androidx.media3.exoplayer.ExoPlayer
 fun WhiteSoundsPage(
     whiteSoundFiles: List<String>,
     whiteSoundFolder: String,
-    player: ExoPlayer
+    player: ExoPlayer,
+    onResetTimer: () -> Unit = {}, // 1. 타이머 초기화 콜백 추가
 ) {
     val context = LocalContext.current
     val sharedPreferences = remember {
@@ -96,8 +99,7 @@ fun WhiteSoundsPage(
             columns = GridCells.Fixed(2),
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
-                .navigationBarsPadding() ,
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -119,6 +121,7 @@ fun WhiteSoundsPage(
                                 selectedMediaId = null
                                 currentMediaId = null
                                 isPlaying = false
+                                onResetTimer()
                                 // Clear saved selection
                                 sharedPreferences.edit()
                                     .remove("selected_white_sound")
@@ -171,7 +174,7 @@ fun WhiteSoundsPage(
                         ) {
                             if (isCurrentlyPlaying) {
                                 Icon(
-                                    imageVector = Icons.Default.VolumeUp,
+                                    imageVector = Icons.Default.VolumeUp, //  Icons.Default.Forest,  Icons.Default.Lips,
                                     contentDescription = "Playing",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(32.dp)

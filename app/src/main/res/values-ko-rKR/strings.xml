@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">코코자자 자장가</string>
+    <string name="app_name">코코자자 제발자자</string>
     <string name="playback_channel_name">Playback Controls</string>
     <string name="playback_channel_description">Media playback controls</string>
 
@@ -9,7 +9,17 @@
     <string name="play">재생</string>
     <string name="playlist">재생목록</string>
     <string name="cancel">취소</string>
+    <string name="set">설정</string>
+    <string name="set_sleep_timer">자동꺼짐 시간설정(분)</string>
+
 
     <string name="no_playing_song">재생 중인 곡 없음</string>
+
+
+    <string name="TEST_admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="TEST_admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+
+    <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
+    <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
 
 </resources>

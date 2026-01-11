@@ -66,28 +66,29 @@ fun PlaylistPage(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                     //   horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = fileName,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (positionNumber != null) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = positionNumber.toString(),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                            }
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (positionNumber != null) positionNumber.toString() else "",
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
+
+                        Text(
+                            text = fileName.substringBefore(".mp3"),
+                            modifier = Modifier.weight(1f).padding(start = 12.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End
+                        )
+
                     }
                 }
             }

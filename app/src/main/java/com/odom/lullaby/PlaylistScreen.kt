@@ -36,7 +36,10 @@ fun PlaylistScreen(
     ) {
         // 현재 재생 중인 곡 표시
         Text(
-            text = currentItem?.mediaId ?: stringResource(R.string.no_playing_song),
+            text = currentItem?.mediaId?.let { id ->
+                // 마지막 '/' 뒤의 문자열을 가져오고, 그 중에서 마지막 '.' 앞의 문자열만 가져옴
+                id.substringAfterLast('/').substringBeforeLast('.')
+            } ?: stringResource(R.string.no_playing_song),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary
         )

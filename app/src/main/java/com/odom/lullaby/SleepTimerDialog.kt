@@ -1,8 +1,10 @@
 package com.odom.lullaby
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 
@@ -25,7 +27,7 @@ fun SleepTimerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Set")
+                Text(stringResource(R.string.set))
             }
         },
         dismissButton = {
@@ -33,12 +35,13 @@ fun SleepTimerDialog(
                 Text(stringResource(R.string.cancel))
             }
         },
-        title = { Text("Set sleep timer (minutes)") },
+        title = { Text(stringResource(R.string.set_sleep_timer)) },
         text = {
             OutlinedTextField(
                 value = timerInputMinutes,
                 onValueChange = onMinutesChange,
-                label = { Text("Minutes (1-180)") },
+                modifier = Modifier.fillMaxWidth(),
+             //   label = { Text("Minutes (1-180)") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )

@@ -48,6 +48,7 @@ dependencies {
     implementation ("androidx.media3:media3-ui:1.4.1")
     implementation ("androidx.media3:media3-session:1.4.1")
     implementation ("com.google.android.exoplayer:exoplayer:2.18.7")
+    implementation("com.google.android.gms:play-services-ads:23.0.0")
 
 
     implementation(libs.androidx.core.ktx)

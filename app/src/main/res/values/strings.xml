@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Baby Lullaby</string>
+    <string name="app_name">Baby Please Sleep Lullaby</string>
     <string name="playback_channel_name">Playback Controls</string>
     <string name="playback_channel_description">Media playback controls</string>
 
@@ -9,8 +9,16 @@
     <string name="play">Play</string>
     <string name="playlist">Playlist</string>
     <string name="cancel">Cancel</string>
+    <string name="set">Set</string>
+    <string name="set_sleep_timer">Set sleep timer (minutes)</string>
 
     <string name="no_playing_song">No track playing</string>
 
+
+    <string name="TEST_admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="TEST_admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+
+    <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
+    <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
 
 </resources>
