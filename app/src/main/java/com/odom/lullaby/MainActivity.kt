@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -49,9 +51,28 @@ private const val CHANNEL_ID = "playback_channel"
 class MainActivity : ComponentActivity() {
 
     private var notificationManager: PlayerNotificationManager? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     // isPlaying 상태를 업데이트하는 람다 함수를 저장할 변수 추가
     private var updateIsPlayingState: ((Boolean) -> Unit)? = null
+
+    private fun acquireWakeLock() {
+        if (wakeLock == null) {
+            wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BabyLullaby:Playback")
+            wakeLock?.acquire() // No timeout = play indefinitely
+        }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.release()
+        wakeLock = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        releaseWakeLock()
+    }
 
     @androidx.annotation.OptIn(UnstableApi::class)
     @OptIn(UnstableApi::class)
@@ -132,6 +153,12 @@ class MainActivity : ComponentActivity() {
                     ExoPlayer.Builder(contextInner).build().apply {
                         // Enable repeat mode to loop through entire playlist
                         repeatMode = Player.REPEAT_MODE_ALL
+                        // Configure audio attributes for background playback
+                        val audioAttributes = AudioAttributes.Builder()
+                            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                            .setUsage(C.USAGE_MEDIA)
+                            .build()
+                        setAudioAttributes(audioAttributes, true)
                     }
                 }
                 
@@ -139,6 +166,12 @@ class MainActivity : ComponentActivity() {
                     ExoPlayer.Builder(contextInner).build().apply {
                         // Set repeat mode to ONE to loop single file
                         repeatMode = Player.REPEAT_MODE_ONE
+                        // Configure audio attributes for background playback
+                        val audioAttributes = AudioAttributes.Builder()
+                            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                            .setUsage(C.USAGE_MEDIA)
+                            .build()
+                        setAudioAttributes(audioAttributes, true)
                     }
                 }
                 
@@ -475,10 +508,22 @@ class MainActivity : ComponentActivity() {
                         playlistMediaSession.release()
                         whiteSoundMediaSession.release()
                         playlistPlayer.release()
+                        wakeLock?.release()
                         updateIsPlayingState = null // 메모리 누수 방지
                     }
-
                 }
+
+//                override fun onDestroy() {
+//                    playlistPlayer.removeListener(listener)
+//                    playlistNotificationManager.setPlayer(null)
+//                    whiteSoundNotificationManager.setPlayer(null)
+//                    whiteSoundPlayer.release()
+//                    playlistMediaSession.release()
+//                    whiteSoundMediaSession.release()
+//                    playlistPlayer.release()
+//                    wakeLock?.release()
+//                    updateIsPlayingState = null // 메모리 누수 방지
+//                }
 
                 Column(modifier = Modifier
                     .fillMaxSize()
@@ -601,6 +646,7 @@ class MainActivity : ComponentActivity() {
                                 whiteSoundFolder = whiteSoundFolder,
                                 player = whiteSoundPlayer,
                                 onPlay = {
+                                    acquireWakeLock() // Add WakeLock
                                     // Playlist 재생 중지 및 notification 제거
                                     if (playlistPlayer.isPlaying) {
                                         playlistPlayer.pause()
@@ -613,6 +659,7 @@ class MainActivity : ComponentActivity() {
                                     timerSecondsLeft = timerSecondsTotal
                                     isTimerRunning = false
                                     whiteSoundNotificationManager.setPlayer(null)
+                                    releaseWakeLock() // Release WakeLock when stopping
                                 }
                             )
                         }
@@ -635,6 +682,7 @@ class MainActivity : ComponentActivity() {
                             currentIndex = currentIndex,
                             isPlaying = isPlaying,
                             onPlay = {
+                                acquireWakeLock() // Add WakeLock
                                 // WhiteSound 재생 중지 및 notification 제거
                                 if (whiteSoundPlayer.isPlaying) {
                                     whiteSoundPlayer.pause()
@@ -648,7 +696,7 @@ class MainActivity : ComponentActivity() {
                                 timerSecondsLeft = timerSecondsTotal
                                 isTimerRunning = false
                                 playlistNotificationManager.setPlayer(null)
-
+                                releaseWakeLock() // Release WakeLock when stopping
                             },
                             modifier = Modifier
                                 .fillMaxWidth()

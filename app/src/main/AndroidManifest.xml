@@ -31,7 +31,7 @@
         </activity>
 
         <service
-            android:name="androidx.media3.session.MediaSessionService"
+            android:name="com.odom.lullaby.PlaybackService"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback"
