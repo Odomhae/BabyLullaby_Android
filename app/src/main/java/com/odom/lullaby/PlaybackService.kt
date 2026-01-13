@@ -22,6 +22,7 @@ import androidx.media3.session.MediaSessionService
 
 class PlaybackService : MediaSessionService() {
     
+    private var notificationManager: NotificationManager? = null
     private var playlistMediaSession: MediaSession? = null
     private var whiteSoundMediaSession: MediaSession? = null
     private var playlistPlayer: ExoPlayer? = null
@@ -30,13 +31,22 @@ class PlaybackService : MediaSessionService() {
     private var audioManager: AudioManager? = null
     private var audioFocusRequest: AudioFocusRequest? = null
     
+    // Static access to service instance
     companion object {
+        private var instance: PlaybackService? = null
+        
+        fun getInstance(): PlaybackService? = instance
+        
+        fun getPlaylistPlayer(): ExoPlayer? = instance?.playlistPlayer
+        fun getWhiteSoundPlayer(): ExoPlayer? = instance?.whiteSoundPlayer
+        
         private const val NOTIFICATION_ID = 100
         private const val CHANNEL_ID = "playback_service_channel"
     }
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         createNotificationChannel()
         audioManager = getSystemService(AudioManager::class.java)
     }
@@ -65,16 +75,19 @@ class PlaybackService : MediaSessionService() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Start foreground immediately to avoid timeout exception
+        startForeground(NOTIFICATION_ID, createNotification())
+        
         // Ensure service stays alive
         val player = getCurrentPlayer()
         if (player?.isPlaying == true) {
-            startForeground(NOTIFICATION_ID, createNotification())
             acquireWakeLock()
         }
-        return START_STICKY // Restart if killed
+        return START_STICKY // Restart if killed by system
     }
 
     override fun onDestroy() {
+        instance = null
         releaseWakeLock()
         releaseAudioFocus()
         playlistMediaSession?.release()
@@ -102,10 +115,7 @@ class PlaybackService : MediaSessionService() {
         // Request audio focus
         requestAudioFocus()
         
-        // Start foreground service immediately to keep it alive
-        startForeground(NOTIFICATION_ID, createNotification())
-        
-        // Monitor playback state to maintain foreground service
+        // Monitor playback state to start foreground service only when playing
         playlistPlayer.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY || playbackState == Player.STATE_BUFFERING) {
@@ -170,7 +180,7 @@ class PlaybackService : MediaSessionService() {
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "BabyLullaby:PlaybackService"
             )
-            wakeLock?.acquire(10 * 60 * 60 * 1000L) // 10 hours max
+            wakeLock?.acquire() // No timeout - keep playing until timer finishes
         }
     }
     

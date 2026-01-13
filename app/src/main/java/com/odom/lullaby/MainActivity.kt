@@ -27,7 +27,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerNotificationManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.enableEdgeToEdge
@@ -52,9 +55,25 @@ class MainActivity : ComponentActivity() {
 
     private var notificationManager: PlayerNotificationManager? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var timerService: TimerService? = null
+    private var isTimerServiceBound = false
 
     // isPlaying 상태를 업데이트하는 람다 함수를 저장할 변수 추가
     private var updateIsPlayingState: ((Boolean) -> Unit)? = null
+
+    // TimerService connection
+    private val timerServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as TimerService.LocalBinder
+            timerService = binder.getService()
+            isTimerServiceBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            isTimerServiceBound = false
+            timerService = null
+        }
+    }
 
     private fun acquireWakeLock() {
         if (wakeLock == null) {
@@ -67,6 +86,23 @@ class MainActivity : ComponentActivity() {
     private fun releaseWakeLock() {
         wakeLock?.release()
         wakeLock = null
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Bind to TimerService
+        Intent(this, TimerService::class.java).also { intent ->
+            bindService(intent, timerServiceConnection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Unbind from TimerService
+        if (isTimerServiceBound) {
+            unbindService(timerServiceConnection)
+            isTimerServiceBound = false
+        }
     }
 
     override fun onDestroy() {
@@ -83,7 +119,7 @@ class MainActivity : ComponentActivity() {
         MobileAds.initialize(this) {}
 
         // 배터리 최적화 제외 요청 호출
-        //requestIgnoreBatteryOptimizations()
+        requestIgnoreBatteryOptimizations()
 
         enableEdgeToEdge()
 
@@ -148,9 +184,22 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Create players with proper lifecycle management
+                // Start services
+                LaunchedEffect(Unit) {
+                    // Start TimerService first (no foreground required)
+                    val timerIntent = Intent(contextInner, TimerService::class.java)
+                    startService(timerIntent)
+                    
+                    // Wait a moment for TimerService to initialize
+                    delay(500)
+                    
+                    // Start PlaybackService only when actually playing
+                    // PlaybackService will call startForeground() when playback starts
+                }
+                
+                // Get players from service (they persist across activity destruction)
                 val playlistPlayer = remember {
-                    ExoPlayer.Builder(contextInner).build().apply {
+                    PlaybackService.getPlaylistPlayer() ?: ExoPlayer.Builder(contextInner).build().apply {
                         // Enable repeat mode to loop through entire playlist
                         repeatMode = Player.REPEAT_MODE_ALL
                         // Configure audio attributes for background playback
@@ -163,7 +212,7 @@ class MainActivity : ComponentActivity() {
                 }
                 
                 val whiteSoundPlayer = remember {
-                    ExoPlayer.Builder(contextInner).build().apply {
+                    PlaybackService.getWhiteSoundPlayer() ?: ExoPlayer.Builder(contextInner).build().apply {
                         // Set repeat mode to ONE to loop single file
                         repeatMode = Player.REPEAT_MODE_ONE
                         // Configure audio attributes for background playback
@@ -220,35 +269,32 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 
-                // Countdown effect for shared timer
-                LaunchedEffect(isTimerRunning) {
-                    if (!isTimerRunning) return@LaunchedEffect
-                    
-                    while (isTimerRunning && timerSecondsLeft > 0) {
-                        delay(1000)
-                        if (isTimerRunning) {
-                            timerSecondsLeft -= 1
+                // Use bound TimerService for timer management
+                LaunchedEffect(isTimerServiceBound) {
+                    if (isTimerServiceBound && timerService != null) {
+                        // Collect timer state from service
+                        timerService!!.timerSecondsLeft.collect { secondsLeft ->
+                            timerSecondsLeft = secondsLeft
                         }
                     }
-                    
-                    // Time finished - pause both players
-                    if (timerSecondsLeft <= 0) {
-                        playlistPlayer.pause()
-                        whiteSoundPlayer.pause()
-                        isTimerRunning = false
-                        isPlaylistPlaying = false
-                        isWhiteSoundPlaying = false
-                        timerSecondsLeft = timerSecondsTotal
+                }
+                
+                LaunchedEffect(isTimerServiceBound) {
+                    if (isTimerServiceBound && timerService != null) {
+                        // Collect timer running state from service
+                        timerService!!.isTimerRunning.collect { running ->
+                            isTimerRunning = running
+                        }
                     }
                 }
                 
                 // Start timer when any playback starts
-                LaunchedEffect(isPlaylistPlaying, isWhiteSoundPlaying) {
+                LaunchedEffect(isPlaylistPlaying, isWhiteSoundPlaying, isTimerServiceBound) {
                     val isAnyPlaying = isPlaylistPlaying || isWhiteSoundPlaying
-                    if (isAnyPlaying && !isTimerRunning && timerSecondsTotal > 0) {
-                        isTimerRunning = true
-                    } else if (!isAnyPlaying) {
-                        isTimerRunning = false
+                    if (isAnyPlaying && !isTimerRunning && timerSecondsTotal > 0 && isTimerServiceBound) {
+                        timerService?.startTimer(timerSecondsTotal)
+                    } else if (!isAnyPlaying && isTimerServiceBound) {
+                        timerService?.stopTimer()
                     }
                 }
                 
@@ -647,6 +693,10 @@ class MainActivity : ComponentActivity() {
                                 player = whiteSoundPlayer,
                                 onPlay = {
                                     acquireWakeLock() // Add WakeLock
+                                    // Start PlaybackService when playback begins
+                                    val playbackIntent = Intent(contextInner, PlaybackService::class.java)
+                                    startForegroundService(playbackIntent)
+                                    
                                     // Playlist 재생 중지 및 notification 제거
                                     if (playlistPlayer.isPlaying) {
                                         playlistPlayer.pause()
@@ -683,6 +733,10 @@ class MainActivity : ComponentActivity() {
                             isPlaying = isPlaying,
                             onPlay = {
                                 acquireWakeLock() // Add WakeLock
+                                // Start PlaybackService when playback begins
+                                val playbackIntent = Intent(contextInner, PlaybackService::class.java)
+                                startForegroundService(playbackIntent)
+                                
                                 // WhiteSound 재생 중지 및 notification 제거
                                 if (whiteSoundPlayer.isPlaying) {
                                     whiteSoundPlayer.pause()
@@ -723,9 +777,9 @@ class MainActivity : ComponentActivity() {
                             sharedPreferencesForTimer.edit()
                                 .putInt("sleep_timer_minutes", minutes)
                                 .apply()
-                            // Only start timer if already playing
-                            if (!isTimerRunning) {
-                                isTimerRunning = (isPlaylistPlaying || isWhiteSoundPlaying) && timerSecondsTotal > 0
+                            // Start timer if already playing and service is bound
+                            if ((isPlaylistPlaying || isWhiteSoundPlaying) && isTimerServiceBound) {
+                                timerService?.startTimer(timerSecondsTotal)
                             }
                             showTimerDialog = false
                         },
@@ -737,24 +791,24 @@ class MainActivity : ComponentActivity() {
     }
 
 
-//    private fun requestIgnoreBatteryOptimizations() {
-//        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-//        val packageName = packageName
-//
-//        // 이미 최적화 제외 대상인지 확인
-//        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-//            try {
-//                // 사용자에게 설정을 요청하는 인텐트 (이 작업은 배터리 사용량 최적화 목록으로 보냅니다)
-//                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-//                    data = Uri.parse("package:$packageName")
-//                }
-//                startActivity(intent)
-//            } catch (e: Exception) {
-//                // 일부 기기나 버전에서 인텐트가 지원되지 않을 경우를 대비
-//                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-//                startActivity(intent)
-//            }
-//        }
-//    }
+private fun requestIgnoreBatteryOptimizations() {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val packageName = packageName
+
+        // 이미 최적화 제외 대상인지 확인
+        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+            try {
+                // 사용자에게 설정을 요청하는 인텐트 (이 작업은 배터리 사용량 최적화 목록으로 보냅니다)
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                // 일부 기기나 버전에서 인텐트가 지원되지 않을 경우를 대비
+                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                startActivity(intent)
+            }
+        }
+    }
 
 }
