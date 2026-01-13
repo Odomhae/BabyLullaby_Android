@@ -136,6 +136,11 @@ class PlaybackService : MediaSessionService() {
                     if (whiteSoundPlayer?.isPlaying != true) {
                         releaseWakeLock()
                     }
+                    // Stop service if neither player is playing
+                    if (playlistPlayer?.isPlaying != true && whiteSoundPlayer?.isPlaying != true) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                    }
                 }
             }
         })
@@ -159,6 +164,11 @@ class PlaybackService : MediaSessionService() {
                     // Only release wake lock if neither player is playing
                     if (playlistPlayer?.isPlaying != true) {
                         releaseWakeLock()
+                    }
+                    // Stop service if neither player is playing
+                    if (playlistPlayer?.isPlaying != true && whiteSoundPlayer?.isPlaying != true) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
                     }
                 }
             }
