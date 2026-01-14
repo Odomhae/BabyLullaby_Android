@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.os.PowerManager
+import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,9 @@ class TimerService : Service() {
     private val _isTimerRunning = MutableStateFlow(false)
     val isTimerRunning: StateFlow<Boolean> = _isTimerRunning
     
+    private val _timerFinished = MutableStateFlow(false)
+    val timerFinished: StateFlow<Boolean> = _timerFinished
+    
     inner class LocalBinder : Binder() {
         fun getService(): TimerService = this@TimerService
     }
@@ -30,20 +34,9 @@ class TimerService : Service() {
         
         fun getInstance(): TimerService? = instance
         
-        // Static methods to control timer
-        fun startTimer(seconds: Int) {
-            instance?.startTimer(seconds)
-        }
-        
-        fun stopTimer() {
-            instance?.stopTimer()
-        }
-        
-        fun getTimerState(): Pair<Int, Boolean> {
-            return Pair(
-                instance?.timerSecondsLeft?.value ?: 0,
-                instance?.isTimerRunning?.value ?: false
-            )
+        // Static methods for external access
+        fun stopAllPlayback() {
+            instance?.performStopAllPlayback()
         }
     }
     
@@ -61,11 +54,13 @@ class TimerService : Service() {
     }
     
     fun startTimer(totalSeconds: Int) {
+        Log.d("TimerService", "startTimer called with $totalSeconds seconds")
         stopTimer() // Cancel any existing timer
         
         _timerSecondsLeft.value = totalSeconds
         _isTimerRunning.value = true
         
+        Log.d("TimerService", "Timer started, seconds left: ${_timerSecondsLeft.value}, running: ${_isTimerRunning.value}")
         acquireWakeLock()
         
         job = CoroutineScope(Dispatchers.Main).launch {
@@ -73,14 +68,22 @@ class TimerService : Service() {
                 delay(1000)
                 if (_isTimerRunning.value) {
                     _timerSecondsLeft.value -= 1
+                    Log.d("TimerService", "Timer tick: ${_timerSecondsLeft.value} seconds left")
                 }
             }
             
-            // Timer finished - stop all playback
+            // Timer finished - notify MainActivity
+            Log.d("TimerService", "Timer finished! Seconds left: ${_timerSecondsLeft.value}, emitting finished event")
             if (_timerSecondsLeft.value <= 0) {
-                stopAllPlayback()
+                _timerFinished.value = true
                 _isTimerRunning.value = false
                 releaseWakeLock()
+                
+                // Reset after a short delay
+                kotlinx.coroutines.GlobalScope.launch {
+                    delay(1000)
+                    _timerFinished.value = false
+                }
             }
         }
     }
@@ -91,13 +94,31 @@ class TimerService : Service() {
         releaseWakeLock()
     }
     
-    private fun stopAllPlayback() {
+    private fun performStopAllPlayback() {
+        Log.d("TimerService", "performStopAllPlayback called")
+        
         // Stop both players through PlaybackService
-        PlaybackService.getPlaylistPlayer()?.pause()
-        PlaybackService.getWhiteSoundPlayer()?.pause()
+        val playlistPlayer = PlaybackService.getPlaylistPlayer()
+        val whiteSoundPlayer = PlaybackService.getWhiteSoundPlayer()
+        val playbackService = PlaybackService.getInstance()
+        
+        Log.d("TimerService", "Playlist player: $playlistPlayer, WhiteSound player: $whiteSoundPlayer, PlaybackService: $playbackService")
+        
+        // Try to stop players directly
+        playlistPlayer?.pause()
+        whiteSoundPlayer?.pause()
+        
+        // Also try to stop them more forcefully
+        playlistPlayer?.stop()
+        whiteSoundPlayer?.stop()
         
         // Stop PlaybackService and dismiss notification
-        PlaybackService.getInstance()?.stopSelf()
+        playbackService?.stopSelf()
+        
+        // Also stop the service to ensure cleanup
+        stopSelf()
+        
+        Log.d("TimerService", "performStopAllPlayback completed")
     }
     
     private fun acquireWakeLock() {

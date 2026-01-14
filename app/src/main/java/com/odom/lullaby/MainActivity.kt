@@ -4,6 +4,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -291,14 +292,19 @@ class MainActivity : ComponentActivity() {
                 // Start timer when any playback starts
                 LaunchedEffect(isPlaylistPlaying, isWhiteSoundPlaying, isTimerServiceBound) {
                     val isAnyPlaying = isPlaylistPlaying || isWhiteSoundPlaying
+                    Log.d("MainActivity", "Timer check - isAnyPlaying: $isAnyPlaying, !isTimerRunning: $!isTimerRunning, timerSecondsTotal: $timerSecondsTotal, isTimerServiceBound: $isTimerServiceBound")
+                    
                     if (isAnyPlaying && !isTimerRunning && timerSecondsTotal > 0 && isTimerServiceBound) {
                         // Check if we're resuming from pause vs fresh start
                         if (timerSecondsLeft < timerSecondsTotal) {
+                            Log.d("MainActivity", "Resuming timer with $timerSecondsLeft seconds")
                             timerService?.startTimer(timerSecondsLeft) // Resume with remaining time
                         } else {
+                            Log.d("MainActivity", "Starting fresh timer with $timerSecondsTotal seconds")
                             timerService?.startTimer(timerSecondsTotal) // Fresh start with full duration
                         }
                     } else if (!isAnyPlaying && isTimerServiceBound) {
+                        Log.d("MainActivity", "Stopping timer - no playback")
                         timerService?.stopTimer()
                     }
                 }
@@ -419,6 +425,36 @@ class MainActivity : ComponentActivity() {
                     .apply {
                         setMediaSessionToken(whiteSoundMediaSession.sessionCompatToken)
                         setPlayer(whiteSoundPlayer)
+                    }
+                }
+                
+                LaunchedEffect(isTimerServiceBound) {
+                    if (isTimerServiceBound && timerService != null) {
+                        // Collect timer finished event from service
+                        timerService!!.timerFinished.collect { finished ->
+                            if (finished) {
+                                Log.d("MainActivity", "Timer finished event received, stopping playback")
+                                // Stop both players
+                                playlistPlayer.pause()
+                                whiteSoundPlayer.pause()
+                                playlistPlayer.stop()
+                                whiteSoundPlayer.stop()
+                                
+                                // Clear notifications
+                                playlistNotificationManager.setPlayer(null)
+                                whiteSoundNotificationManager.setPlayer(null)
+                                
+                                // Stop PlaybackService
+                                val playbackIntent = Intent(contextInner, PlaybackService::class.java)
+                                contextInner.stopService(playbackIntent)
+                                
+                                // Reset timer display
+                                timerSecondsLeft = timerSecondsTotal
+                                
+                                // Release WakeLock
+                                releaseWakeLock()
+                            }
+                        }
                     }
                 }
 
