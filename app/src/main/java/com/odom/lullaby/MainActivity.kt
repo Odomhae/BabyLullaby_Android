@@ -292,7 +292,12 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(isPlaylistPlaying, isWhiteSoundPlaying, isTimerServiceBound) {
                     val isAnyPlaying = isPlaylistPlaying || isWhiteSoundPlaying
                     if (isAnyPlaying && !isTimerRunning && timerSecondsTotal > 0 && isTimerServiceBound) {
-                        timerService?.startTimer(timerSecondsTotal)
+                        // Check if we're resuming from pause vs fresh start
+                        if (timerSecondsLeft < timerSecondsTotal) {
+                            timerService?.startTimer(timerSecondsLeft) // Resume with remaining time
+                        } else {
+                            timerService?.startTimer(timerSecondsTotal) // Fresh start with full duration
+                        }
                     } else if (!isAnyPlaying && isTimerServiceBound) {
                         timerService?.stopTimer()
                     }
