@@ -39,7 +39,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
-import androidx.core.app.NotificationManagerCompat
 import androidx.media3.common.MediaMetadata
 import com.odom.lullaby.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.launch
@@ -54,7 +53,6 @@ private const val CHANNEL_ID = "playback_channel"
 @UnstableApi
 class MainActivity : ComponentActivity() {
 
-    private var notificationManager: PlayerNotificationManager? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var timerService: TimerService? = null
     private var isTimerServiceBound = false
@@ -364,7 +362,8 @@ class MainActivity : ComponentActivity() {
                             }
 
                             override fun getCurrentContentText(player: Player): CharSequence? {
-                                return "Baby Lullaby"
+                                val appName = getString(R.string.app_name)
+                                return appName
                             }
 
                             override fun getCurrentLargeIcon(

@@ -29,20 +29,8 @@ class TimerService : Service() {
         fun getService(): TimerService = this@TimerService
     }
     
-    companion object {
-        private var instance: TimerService? = null
-        
-        fun getInstance(): TimerService? = instance
-        
-        // Static methods for external access
-        fun stopAllPlayback() {
-            instance?.performStopAllPlayback()
-        }
-    }
-    
     override fun onCreate() {
         super.onCreate()
-        instance = this
     }
     
     override fun onBind(intent: Intent?): IBinder {
@@ -94,33 +82,6 @@ class TimerService : Service() {
         releaseWakeLock()
     }
     
-    private fun performStopAllPlayback() {
-        Log.d("TimerService", "performStopAllPlayback called")
-        
-        // Stop both players through PlaybackService
-        val playlistPlayer = PlaybackService.getPlaylistPlayer()
-        val whiteSoundPlayer = PlaybackService.getWhiteSoundPlayer()
-        val playbackService = PlaybackService.getInstance()
-        
-        Log.d("TimerService", "Playlist player: $playlistPlayer, WhiteSound player: $whiteSoundPlayer, PlaybackService: $playbackService")
-        
-        // Try to stop players directly
-        playlistPlayer?.pause()
-        whiteSoundPlayer?.pause()
-        
-        // Also try to stop them more forcefully
-        playlistPlayer?.stop()
-        whiteSoundPlayer?.stop()
-        
-        // Stop PlaybackService and dismiss notification
-        playbackService?.stopSelf()
-        
-        // Also stop the service to ensure cleanup
-        stopSelf()
-        
-        Log.d("TimerService", "performStopAllPlayback completed")
-    }
-    
     private fun acquireWakeLock() {
         if (wakeLock == null || !wakeLock!!.isHeld) {
             val powerManager = getSystemService(PowerManager::class.java)
@@ -142,7 +103,6 @@ class TimerService : Service() {
     }
     
     override fun onDestroy() {
-        instance = null
         stopTimer()
         super.onDestroy()
     }
