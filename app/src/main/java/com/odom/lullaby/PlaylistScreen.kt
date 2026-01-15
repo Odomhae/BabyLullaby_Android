@@ -38,8 +38,18 @@ fun PlaylistScreen(
         // 현재 재생 중인 곡 표시
         Text(
             text = currentItem?.mediaId?.let { id ->
-                // 마지막 '/' 뒤의 문자열을 가져오고, 그 중에서 마지막 '.' 앞의 문자열만 가져옴
-                id.substringAfterLast('/').substringBeforeLast('.')
+                try {
+                    // 마지막 '/' 뒤의 문자열을 가져오고, 그 중에서 마지막 '.' 앞의 문자열만 가져옴
+                    val fileName = id.substringAfterLast('/', "")
+                    if (fileName.contains('.')) {
+                        fileName.substringBeforeLast('.')
+                    } else {
+                        fileName
+                    }
+                } catch (e: Exception) {
+                    // 오류 발생 시 mediaId 그대로 사용
+                    id.substringAfterLast('/', id)
+                }
             } ?: stringResource(R.string.no_playing_song),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary
@@ -57,7 +67,7 @@ fun PlaylistScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.SkipPrevious,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(50.dp),
                     contentDescription = "이전곡"
 
                 )
@@ -72,12 +82,6 @@ fun PlaylistScreen(
                         if (player.playbackState == Player.STATE_IDLE) {
                             player.prepare()
                         }
-                        // 정지 상태(STATE_IDLE)에서 재생할 때는 항상 처음부터 재생
-                        // 또는 재생이 끝난 상태(STATE_ENDED)에서도 처음부터 재생
-                        if (player.playbackState == Player.STATE_IDLE || 
-                            player.playbackState == Player.STATE_ENDED) {
-                            player.seekTo(0)
-                        }
                         onPlay()
                         player.play()
                     }
@@ -86,7 +90,7 @@ fun PlaylistScreen(
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(50.dp),
                     contentDescription = if (isPlaying) "일시정지" else "재생"
                 )
             }
@@ -95,12 +99,11 @@ fun PlaylistScreen(
             if (playlist.isNotEmpty() /*&& player.playbackState != Player.STATE_IDLE*/) {
                 IconButton(onClick = { 
                     player.stop()
-                    player.seekTo(0) // 정지 후 처음 위치로 이동
                     onResetTimer()
                 }) {
                     Icon(
                         imageVector = Icons.Default.Stop,
-                        modifier = Modifier.size(40.dp),
+                        modifier = Modifier.size(50.dp),
                         contentDescription = "정지"
                     )
                 }
@@ -112,7 +115,7 @@ fun PlaylistScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.SkipNext,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(50.dp),
                     contentDescription = "다음곡"
                 )
             }

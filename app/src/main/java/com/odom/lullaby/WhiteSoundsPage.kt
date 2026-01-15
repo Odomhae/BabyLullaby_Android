@@ -2,6 +2,7 @@ package com.odom.lullaby
 
 import android.content.Context
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
@@ -25,7 +27,7 @@ import androidx.media3.exoplayer.ExoPlayer
 
 @Composable
 fun WhiteSoundsPage(
-    whiteSoundFiles: List<String>,
+    whiteSoundItems: List<WhiteSoundItem>,
     whiteSoundFolder: String,
     player: ExoPlayer,
     onPlay: () -> Unit,
@@ -51,23 +53,35 @@ fun WhiteSoundsPage(
     // Restore saved selection on first load
     LaunchedEffect(Unit) {
         if (savedSelectedMediaId != null && player.mediaItemCount == 0) {
-            // Restore the saved selection
-            val uri = Uri.parse(savedSelectedMediaId)
-            val fileName = uri.lastPathSegment?.substringBeforeLast(".") ?: "Unknown"
-            val mediaItem = MediaItem.Builder()
-                .setUri(uri)
-                .setMediaId(savedSelectedMediaId)
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(fileName)
-                        .build()
-                )
-                .build()
-            
-            player.addMediaItem(mediaItem)
-            player.repeatMode = Player.REPEAT_MODE_ONE
-            player.prepare()
-            // Don't auto-play, just restore the selection state
+            try {
+                // Restore the saved selection
+                val uri = Uri.parse(savedSelectedMediaId)
+                val fileName = uri.lastPathSegment?.let { path ->
+                    if (path.contains('.')) {
+                        path.substringBeforeLast(".")
+                    } else {
+                        path
+                    }
+                } ?: "Unknown"
+                val mediaItem = MediaItem.Builder()
+                    .setUri(uri)
+                    .setMediaId(savedSelectedMediaId)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(fileName)
+                            .build()
+                    )
+                    .build()
+                
+                player.addMediaItem(mediaItem)
+                player.repeatMode = Player.REPEAT_MODE_ONE
+                player.prepare()
+                // Don't auto-play, just restore the selection state
+            } catch (e: Exception) {
+                // 오류 발생 시 저장된 선택 상태 제거
+                sharedPreferences.edit().remove("selected_white_sound").apply()
+                selectedMediaId = null
+            }
         }
     }
     
@@ -112,9 +126,9 @@ fun WhiteSoundsPage(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(whiteSoundFiles) { fileName ->
-                val mediaId = "asset:///$whiteSoundFolder/$fileName"
-                val displayName = fileName.substringBeforeLast(".")
+            items(whiteSoundItems) { item ->
+                val mediaId = "asset:///$whiteSoundFolder/${item.soundFileName}"
+                val displayName = item.displayName
                 val isCurrentlySelected = selectedMediaId == mediaId
                 val isCurrentlyPlaying = currentMediaId == mediaId && isPlaying
                 
@@ -136,32 +150,37 @@ fun WhiteSoundsPage(
                                     .remove("selected_white_sound")
                                     .apply()
                             } else {
-                                // Select: play the white sound file and start timer
-                                val uri = Uri.parse(mediaId)
-                                val mediaItem = MediaItem.Builder()
-                                    .setUri(uri)
-                                    .setMediaId(mediaId)
-                                    .setMediaMetadata(
-                                        MediaMetadata.Builder()
-                                            .setTitle(displayName)
-                                            .build()
-                                    )
-                                    .build()
-                                
-                                // Clear current playlist and play only this white sound
-                                player.clearMediaItems()
-                                player.addMediaItem(mediaItem)
-                                // Set repeat mode to ONE to loop this single file
-                                player.repeatMode = Player.REPEAT_MODE_ONE
-                                player.prepare()
-                                onPlay() // 재생하기 전에 알림 연결 로직 호출
-                                player.play()
-                                
-                                // Save selected media ID
-                                selectedMediaId = mediaId
-                                sharedPreferences.edit()
-                                    .putString("selected_white_sound", mediaId)
-                                    .apply()
+                                try {
+                                    // Select: play the white sound file and start timer
+                                    val uri = Uri.parse(mediaId)
+                                    val mediaItem = MediaItem.Builder()
+                                        .setUri(uri)
+                                        .setMediaId(mediaId)
+                                        .setMediaMetadata(
+                                            MediaMetadata.Builder()
+                                                .setTitle(displayName)
+                                                .build()
+                                        )
+                                        .build()
+                                    
+                                    // Clear current playlist and play only this white sound
+                                    player.clearMediaItems()
+                                    player.addMediaItem(mediaItem)
+                                    // Set repeat mode to ONE to loop this single file
+                                    player.repeatMode = Player.REPEAT_MODE_ONE
+                                    player.prepare()
+                                    onPlay() // 재생하기 전에 알림 연결 로직 호출
+                                    player.play()
+                                    
+                                    // Save selected media ID
+                                    selectedMediaId = mediaId
+                                    sharedPreferences.edit()
+                                        .putString("selected_white_sound", mediaId)
+                                        .apply()
+                                } catch (e: Exception) {
+                                    // 오류 발생 시 처리 (예: 파일이 없는 경우)
+                                    android.util.Log.e("WhiteSoundsPage", "Error playing white sound: ${e.message}")
+                                }
                             }
                         },
                     colors = CardDefaults.cardColors(
@@ -182,15 +201,16 @@ fun WhiteSoundsPage(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            if (isCurrentlyPlaying) {
-                                Icon(
-                                    imageVector = Icons.Default.VolumeUp, //  Icons.Default.Forest,  Icons.Default.Lips,
-                                    contentDescription = "Playing",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
+                            Image(
+                                painter = painterResource(id = item.imageResId),
+                                contentDescription = displayName,
+                                modifier = Modifier.fillMaxSize()//size(64.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            // todo jihoon
+//                            if (isCurrentlyPlaying) {
+//
+//                            }
                             Text(
                                 text = displayName,
                                 style = MaterialTheme.typography.titleMedium,

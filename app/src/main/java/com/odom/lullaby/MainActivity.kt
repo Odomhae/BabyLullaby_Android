@@ -39,6 +39,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.media3.common.MediaMetadata
 import com.odom.lullaby.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.launch
@@ -272,8 +273,11 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(isTimerServiceBound) {
                     if (isTimerServiceBound && timerService != null) {
                         // Collect timer state from service
+                        // timer가 실행 중일 때만 업데이트하여, timer가 멈춘 상태에서 0으로 덮어쓰는 것을 방지
                         timerService!!.timerSecondsLeft.collect { secondsLeft ->
-                            timerSecondsLeft = secondsLeft
+                            if (timerService!!.isTimerRunning.value) {
+                                timerSecondsLeft = secondsLeft
+                            }
                         }
                     }
                 }
@@ -294,7 +298,7 @@ class MainActivity : ComponentActivity() {
                     
                     if (isAnyPlaying && !isTimerRunning && timerSecondsTotal > 0 && isTimerServiceBound) {
                         // Check if we're resuming from pause vs fresh start
-                        if (timerSecondsLeft < timerSecondsTotal) {
+                        if (timerSecondsLeft < timerSecondsTotal && timerSecondsLeft > 0) {
                             Log.d("MainActivity", "Resuming timer with $timerSecondsLeft seconds")
                             timerService?.startTimer(timerSecondsLeft) // Resume with remaining time
                         } else {
@@ -304,6 +308,8 @@ class MainActivity : ComponentActivity() {
                     } else if (!isAnyPlaying && isTimerServiceBound) {
                         Log.d("MainActivity", "Stopping timer - no playback")
                         timerService?.stopTimer()
+                        // timer가 멈췄을 때 timerSecondsLeft를 timerSecondsTotal로 리셋하여 다음 재생 시 올바른 값으로 시작
+                        timerSecondsLeft = timerSecondsTotal
                     }
                 }
                 
@@ -356,7 +362,18 @@ class MainActivity : ComponentActivity() {
                                 val title = mediaItem?.mediaMetadata?.title?.toString()
                                 if (!title.isNullOrEmpty()) return title
                                 val fileName = mediaItem?.mediaId?.let {
-                                    Uri.parse(it).lastPathSegment?.substringBeforeLast(".")
+                                    try {
+                                        val path = Uri.parse(it).lastPathSegment
+                                        path?.let { p ->
+                                            if (p.contains('.')) {
+                                                p.substringBeforeLast(".")
+                                            } else {
+                                                p
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        null
+                                    }
                                 }
                                 return fileName ?: "Lullaby"
                             }
@@ -381,7 +398,8 @@ class MainActivity : ComponentActivity() {
                     .build()
                     .apply {
                         setMediaSessionToken(playlistMediaSession.sessionCompatToken)
-                        setPlayer(playlistPlayer)
+                        // 초기에는 플레이어를 연결하지 않음 (재생 중일 때만 연결)
+                        setPlayer(null)
                     }
                 }
                 
@@ -399,7 +417,18 @@ class MainActivity : ComponentActivity() {
                                 val title = mediaItem?.mediaMetadata?.title?.toString()
                                 if (!title.isNullOrEmpty()) return title
                                 val fileName = mediaItem?.mediaId?.let {
-                                    Uri.parse(it).lastPathSegment?.substringBeforeLast(".")
+                                    try {
+                                        val path = Uri.parse(it).lastPathSegment
+                                        path?.let { p ->
+                                            if (p.contains('.')) {
+                                                p.substringBeforeLast(".")
+                                            } else {
+                                                p
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        null
+                                    }
                                 }
                                 return fileName ?: "White Sound"
                             }
@@ -423,7 +452,25 @@ class MainActivity : ComponentActivity() {
                     .build()
                     .apply {
                         setMediaSessionToken(whiteSoundMediaSession.sessionCompatToken)
-                        setPlayer(whiteSoundPlayer)
+                        // 초기에는 플레이어를 연결하지 않음 (재생 중일 때만 연결)
+                        setPlayer(null)
+                    }
+                }
+                
+                // 재생 중일 때만 notification 표시
+                LaunchedEffect(isPlaylistPlaying) {
+                    if (isPlaylistPlaying) {
+                        playlistNotificationManager.setPlayer(playlistPlayer)
+                    } else {
+                        playlistNotificationManager.setPlayer(null)
+                    }
+                }
+                
+                LaunchedEffect(isWhiteSoundPlaying) {
+                    if (isWhiteSoundPlaying) {
+                        whiteSoundNotificationManager.setPlayer(whiteSoundPlayer)
+                    } else {
+                        whiteSoundNotificationManager.setPlayer(null)
                     }
                 }
                 
@@ -478,15 +525,35 @@ class MainActivity : ComponentActivity() {
                 
                 // Load white sound files from assets/whitesound folder
                 val whiteSoundFolder = "whitesound"
-                val whiteSoundFiles = remember {
-                    contextInner.assets.list(whiteSoundFolder)?.toList()?.filter { fileName ->
-                        // Filter for common audio file extensions
-                        fileName.endsWith(".mp3", ignoreCase = true) ||
-                                fileName.endsWith(".m4a", ignoreCase = true) ||
-                                fileName.endsWith(".wav", ignoreCase = true) ||
-                                fileName.endsWith(".ogg", ignoreCase = true) ||
-                                fileName.endsWith(".aac", ignoreCase = true)
-                    } ?: emptyList()
+                val whiteSoundItems = remember {
+                    // 코드상으로 순서를 지정할 수 있도록 리스트 생성
+                    listOf(
+                        WhiteSoundItem(
+                            soundFileName = "birds.mp3",
+                            displayName = "새소리",
+                            imageResId = R.drawable.birds
+                        ),
+                        WhiteSoundItem(
+                            soundFileName = "ocean-waves.mp3",
+                            displayName = "파도소리",
+                            imageResId = R.drawable.ocean_wave
+                        ),
+                        WhiteSoundItem(
+                            soundFileName = "strong-rain.mp3",
+                            displayName = "빗소리",
+                            imageResId = R.drawable.rain
+                        ),
+                        WhiteSoundItem(
+                            soundFileName = "Shhh.m4a",
+                            displayName = "쉿",
+                            imageResId = R.drawable.shhh
+                        ),
+                        WhiteSoundItem(
+                            soundFileName = "shoppingmall.m4a",
+                            displayName = "쇼핑몰",
+                            imageResId = R.drawable.shoppingmall
+                        )
+                    )
                 }
                 
                 // Pager state for ViewPager-like functionality
@@ -495,50 +562,72 @@ class MainActivity : ComponentActivity() {
 
                 // Load saved playlist on startup
                 LaunchedEffect(Unit) {
-                    val savedPlaylistString = sharedPreferences.getString("playlist_order", null)
-                    if (!savedPlaylistString.isNullOrEmpty()) {
-                        val savedMediaIds = savedPlaylistString.split(",")
-                        savedMediaIds.forEach { mediaId ->
-                            if (mediaId.isNotEmpty()) {
-                                val uri = Uri.parse(mediaId)
-                                val fileName = uri.lastPathSegment?.substringBeforeLast(".") ?: "Unknown"
-                                val item = MediaItem.Builder()
-                                    .setUri(uri)
-                                    .setMediaId(mediaId)
-                                    .setMediaMetadata(
-                                        MediaMetadata.Builder()
-                                            .setTitle(fileName)
+                    try {
+                        val savedPlaylistString = sharedPreferences.getString("playlist_order", null)
+                        if (!savedPlaylistString.isNullOrEmpty()) {
+                            val savedMediaIds = savedPlaylistString.split(",")
+                            savedMediaIds.forEach { mediaId ->
+                                if (mediaId.isNotEmpty()) {
+                                    try {
+                                        val uri = Uri.parse(mediaId)
+                                        val fileName = uri.lastPathSegment?.let { path ->
+                                            if (path.contains('.')) {
+                                                path.substringBeforeLast(".")
+                                            } else {
+                                                path
+                                            }
+                                        } ?: "Unknown"
+                                        val item = MediaItem.Builder()
+                                            .setUri(uri)
+                                            .setMediaId(mediaId)
+                                            .setMediaMetadata(
+                                                MediaMetadata.Builder()
+                                                    .setTitle(fileName)
+                                                    .build()
+                                            )
                                             .build()
-                                    )
-                                    .build()
-                                playlist.add(item)
-                                playlistPlayer.addMediaItem(item)
+                                        playlist.add(item)
+                                        playlistPlayer.addMediaItem(item)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("MainActivity", "Error loading playlist item: ${e.message}")
+                                    }
+                                }
+                            }
+                            if (playlist.isNotEmpty()) {
+                                playlistPlayer.prepare()
+                            }
+                        } else {
+                            // If no saved playlist, add all songs in order
+                            assetFiles.forEach { fileName ->
+                                try {
+                                    val mediaId = "asset:///$assetFolder/$fileName"
+                                    val uri = Uri.parse(mediaId)
+                                    val displayName = if (fileName.contains('.')) {
+                                        fileName.substringBeforeLast(".")
+                                    } else {
+                                        fileName
+                                    }
+                                    val item = MediaItem.Builder()
+                                        .setUri(uri)
+                                        .setMediaId(mediaId)
+                                        .setMediaMetadata(
+                                            MediaMetadata.Builder()
+                                                .setTitle(displayName)
+                                                .build()
+                                        )
+                                        .build()
+                                    playlist.add(item)
+                                    playlistPlayer.addMediaItem(item)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("MainActivity", "Error adding asset file: ${e.message}")
+                                }
+                            }
+                            if (playlist.isNotEmpty()) {
+                                playlistPlayer.prepare()
                             }
                         }
-                        if (playlist.isNotEmpty()) {
-                            playlistPlayer.prepare()
-                        }
-                    } else {
-                        // If no saved playlist, add all songs in order
-                        assetFiles.forEach { fileName ->
-                            val mediaId = "asset:///$assetFolder/$fileName"
-                            val uri = Uri.parse(mediaId)
-                            val displayName = fileName.substringBeforeLast(".")
-                            val item = MediaItem.Builder()
-                                .setUri(uri)
-                                .setMediaId(mediaId)
-                                .setMediaMetadata(
-                                    MediaMetadata.Builder()
-                                        .setTitle(displayName)
-                                        .build()
-                                )
-                                .build()
-                            playlist.add(item)
-                            playlistPlayer.addMediaItem(item)
-                        }
-                        if (playlist.isNotEmpty()) {
-                            playlistPlayer.prepare()
-                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainActivity", "Error loading playlist: ${e.message}")
                     }
                     isInitialLoad = false
                 }
@@ -693,7 +782,10 @@ class MainActivity : ComponentActivity() {
                                         pagerState.animateScrollToPage(index)
                                     }
                                 },
-                                text = { Text(title) }
+                                text = {
+                                    Text(
+                                    title, fontWeight = FontWeight.Bold
+                                ) }
                             )
                         }
                     }
@@ -728,7 +820,7 @@ class MainActivity : ComponentActivity() {
                                 onRemoveFromPlaylist = { mediaId -> removeFromPlaylist(playlistPlayer, playlist, mediaId, currentIndex) }
                             )
                             1 -> WhiteSoundsPage(
-                                whiteSoundFiles = whiteSoundFiles,
+                                whiteSoundItems = whiteSoundItems,
                                 whiteSoundFolder = whiteSoundFolder,
                                 player = whiteSoundPlayer,
                                 onPlay = {

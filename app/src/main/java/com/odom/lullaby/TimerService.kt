@@ -43,6 +43,13 @@ class TimerService : Service() {
     
     fun startTimer(totalSeconds: Int) {
         Log.d("TimerService", "startTimer called with $totalSeconds seconds")
+        
+        // totalSeconds가 0 이하이면 시작하지 않음
+        if (totalSeconds <= 0) {
+            Log.w("TimerService", "Invalid timer duration: $totalSeconds seconds")
+            return
+        }
+        
         stopTimer() // Cancel any existing timer
         
         _timerSecondsLeft.value = totalSeconds
@@ -80,6 +87,8 @@ class TimerService : Service() {
         job?.cancel()
         _isTimerRunning.value = false
         releaseWakeLock()
+        // timerSecondsLeft는 리셋하지 않음 (다음 재생 시 이어서 재생할 수 있도록)
+        // 단, timer가 완전히 끝났을 때는 0으로 리셋됨
     }
     
     private fun acquireWakeLock() {
