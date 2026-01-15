@@ -273,10 +273,17 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(isTimerServiceBound) {
                     if (isTimerServiceBound && timerService != null) {
                         // Collect timer state from service
-                        // timer가 실행 중일 때만 업데이트하여, timer가 멈춘 상태에서 0으로 덮어쓰는 것을 방지
+                        // timer가 실행 중일 때는 실시간으로 업데이트하고,
+                        // timer가 멈췄을 때는 마지막 값을 유지 (일시정지 시 남은 시간 표시)
                         timerService!!.timerSecondsLeft.collect { secondsLeft ->
                             if (timerService!!.isTimerRunning.value) {
                                 timerSecondsLeft = secondsLeft
+                            } else {
+                                // 타이머가 멈췄을 때도 현재 값을 유지 (0이 아닌 경우에만)
+                                // 타이머가 완전히 끝났을 때는 0이 되므로, 그때는 리셋하지 않음
+                                if (secondsLeft > 0) {
+                                    timerSecondsLeft = secondsLeft
+                                }
                             }
                         }
                     }
@@ -308,8 +315,8 @@ class MainActivity : ComponentActivity() {
                     } else if (!isAnyPlaying && isTimerServiceBound) {
                         Log.d("MainActivity", "Stopping timer - no playback")
                         timerService?.stopTimer()
-                        // timer가 멈췄을 때 timerSecondsLeft를 timerSecondsTotal로 리셋하여 다음 재생 시 올바른 값으로 시작
-                        timerSecondsLeft = timerSecondsTotal
+                        // 일시정지 시에는 timerSecondsLeft를 리셋하지 않음 (TimerService에서 유지됨)
+                        // 타이머가 완전히 끝났을 때만 리셋됨 (아래 timerFinished 이벤트에서 처리)
                     }
                 }
                 
@@ -462,7 +469,12 @@ class MainActivity : ComponentActivity() {
                     if (isPlaylistPlaying) {
                         playlistNotificationManager.setPlayer(playlistPlayer)
                     } else {
-                        playlistNotificationManager.setPlayer(null)
+                        // 일시정지 중일 때도 알림을 유지하고 싶다면 여기서 null을 세팅하지 않습니다.
+                        // 대신 플레이어의 상태가 IDLE(완전 정지)인 경우에만 알림을 제거합니다.
+                        if (playlistPlayer.playbackState == Player.STATE_IDLE) {
+                            playlistNotificationManager.setPlayer(null)
+                        }
+
                     }
                 }
                 
