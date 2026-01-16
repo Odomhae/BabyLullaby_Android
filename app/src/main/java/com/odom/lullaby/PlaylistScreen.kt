@@ -68,6 +68,7 @@ fun PlaylistScreen(
                 Icon(
                     imageVector = Icons.Default.SkipPrevious,
                     modifier = Modifier.size(50.dp),
+                    tint = MaterialTheme.colorScheme.onBackground,
                     contentDescription = "이전곡"
 
                 )
@@ -91,6 +92,7 @@ fun PlaylistScreen(
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     modifier = Modifier.size(50.dp),
+                    tint = MaterialTheme.colorScheme.onBackground,
                     contentDescription = if (isPlaying) "일시정지" else "재생"
                 )
             }
@@ -104,6 +106,7 @@ fun PlaylistScreen(
                     Icon(
                         imageVector = Icons.Default.Stop,
                         modifier = Modifier.size(50.dp),
+                        tint = MaterialTheme.colorScheme.onBackground,
                         contentDescription = "정지"
                     )
                 }
@@ -116,6 +119,7 @@ fun PlaylistScreen(
                 Icon(
                     imageVector = Icons.Default.SkipNext,
                     modifier = Modifier.size(50.dp),
+                    tint = MaterialTheme.colorScheme.onBackground,
                     contentDescription = "다음곡"
                 )
             }
