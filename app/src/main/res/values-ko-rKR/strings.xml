@@ -22,4 +22,12 @@
     <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
     <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
 
+
+    <string name="sound_bird">새소리</string>
+    <string name="sound_wave">파도소리</string>
+    <string name="sound_rain">빗소리</string>
+    <string name="sound_shhh">쉿</string>
+    <string name="sound_shoppingmall">쇼핑몰소리</string>
+    <string name="sound_vinyl">비닐소리</string>
+
 </resources>

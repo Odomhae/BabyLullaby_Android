@@ -84,8 +84,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun releaseWakeLock() {
-        wakeLock?.release()
-        wakeLock = null
+        try {
+            // wakeLock이 null이 아니고, 현재 획득(held)된 상태인지 확인합니다.
+            if (wakeLock != null && wakeLock?.isHeld == true) {
+                wakeLock?.release()
+            }
+        } catch (e: Exception) {
+            // 만약의 상황(동기화 이슈 등)을 대비해 예외 처리를 추가합니다.
+            Log.e("MainActivity", "Error releasing WakeLock: ${e.message}")
+        } finally {
+            wakeLock = null
+        }
     }
 
     override fun onStart() {
@@ -195,9 +204,6 @@ class MainActivity : ComponentActivity() {
                     
                     // Wait a moment for TimerService to initialize
                     delay(500)
-                    
-                    // Start PlaybackService only when actually playing
-                    // PlaybackService will call startForeground() when playback starts
                 }
                 
                 // Get players from service (they persist across activity destruction)
@@ -545,29 +551,35 @@ class MainActivity : ComponentActivity() {
                     listOf(
                         WhiteSoundItem(
                             soundFileName = "birds.mp3",
-                            displayName = "새소리",
+                            displayName = resources.getString(R.string.sound_bird),
                             imageResId = R.drawable.birds
                         ),
                         WhiteSoundItem(
                             soundFileName = "ocean-waves.mp3",
-                            displayName = "파도소리",
+                            displayName = resources.getString(R.string.sound_wave),
                             imageResId = R.drawable.ocean_wave
                         ),
                         WhiteSoundItem(
                             soundFileName = "strong-rain.mp3",
-                            displayName = "빗소리",
+                            displayName = resources.getString(R.string.sound_rain),
                             imageResId = R.drawable.rain
                         ),
                         WhiteSoundItem(
                             soundFileName = "Shhh.m4a",
-                            displayName = "쉿",
+                            displayName = resources.getString(R.string.sound_shhh),
                             imageResId = R.drawable.shhh
                         ),
                         WhiteSoundItem(
                             soundFileName = "shoppingmall.m4a",
-                            displayName = "쇼핑몰",
+                            displayName = resources.getString(R.string.sound_shoppingmall),
                             imageResId = R.drawable.shoppingmall
+                        ),
+                        WhiteSoundItem(
+                            soundFileName = "vinyl.m4a",
+                            displayName = resources.getString(R.string.sound_vinyl),
+                            imageResId = R.drawable.plasticbag
                         )
+
                     )
                 }
                 
@@ -702,18 +714,6 @@ class MainActivity : ComponentActivity() {
                         updateIsPlayingState = null // 메모리 누수 방지
                     }
                 }
-
-//                override fun onDestroy() {
-//                    playlistPlayer.removeListener(listener)
-//                    playlistNotificationManager.setPlayer(null)
-//                    whiteSoundNotificationManager.setPlayer(null)
-//                    whiteSoundPlayer.release()
-//                    playlistMediaSession.release()
-//                    whiteSoundMediaSession.release()
-//                    playlistPlayer.release()
-//                    wakeLock?.release()
-//                    updateIsPlayingState = null // 메모리 누수 방지
-//                }
 
                 Column(modifier = Modifier
                     .fillMaxSize()
@@ -864,14 +864,7 @@ class MainActivity : ComponentActivity() {
 
                     // Show PlaylistScreen only when playlist page is selected
                     if (pagerState.currentPage == 0) {
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Playlist controls at the bottom
-                        Text(
-                            stringResource(R.string.playlist),
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
+                      //  Spacer(modifier = Modifier.height(5.dp))
 
                         PlaylistScreen(
                             player = playlistPlayer,
@@ -907,7 +900,9 @@ class MainActivity : ComponentActivity() {
                     }
 
                     // 하단 광고 배너 추가
-                    BannerAdView(modifier = Modifier.fillMaxWidth().navigationBarsPadding())
+                    BannerAdView(modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding())
 
                     // Sleep Timer Dialog
                     SleepTimerDialog(
