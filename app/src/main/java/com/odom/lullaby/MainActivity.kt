@@ -163,6 +163,9 @@ class MainActivity : ComponentActivity() {
             
             MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = false) {
                 val contextInner = LocalContext.current
+                
+                // Set background color based on theme
+                val backgroundColor = MaterialTheme.colorScheme.background
 
                 // Create notification channel for Android O and above
                 LaunchedEffect(Unit) {
@@ -715,7 +718,7 @@ class MainActivity : ComponentActivity() {
                 Column(modifier = Modifier
                     .fillMaxSize()
                     .statusBarsPadding()
-                    .background(Color.White)) {
+                    .background(backgroundColor)) {
                     // Top bar with theme toggle and sleep timer
                     Row(
                         modifier = Modifier
