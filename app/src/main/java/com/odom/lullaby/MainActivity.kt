@@ -118,11 +118,21 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         releaseWakeLock()
         
+        // Stop and reset TimerService to ensure full duration on next start
+        if (isTimerServiceBound && timerService != null) {
+            timerService?.stopTimer()
+            timerService?.resetTimerState()
+        }
+        
+        // Stop the TimerService completely
+        val timerIntent = Intent(this, TimerService::class.java)
+        stopService(timerIntent)
+        
         // Clear saved states to force reset on next start
         val sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         sharedPreferences.edit()
             .remove("selected_white_sound")
-            .remove("sleep_timer_minutes") // Reset timer duration
+            .remove("timer_seconds_left") // Clear remaining time but keep timer duration
             .apply()
     }
 

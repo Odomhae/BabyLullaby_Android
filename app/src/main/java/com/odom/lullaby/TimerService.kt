@@ -91,6 +91,14 @@ class TimerService : Service() {
         // 단, timer가 완전히 끝났을 때는 0으로 리셋됨
     }
     
+    fun resetTimerState() {
+        job?.cancel()
+        _timerSecondsLeft.value = 0
+        _isTimerRunning.value = false
+        _timerFinished.value = false
+        releaseWakeLock()
+    }
+    
     private fun acquireWakeLock() {
         if (wakeLock == null || !wakeLock!!.isHeld) {
             val powerManager = getSystemService(PowerManager::class.java)
