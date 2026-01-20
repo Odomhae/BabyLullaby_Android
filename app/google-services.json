@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "890531928293",
+    "project_id": "baby-lullaby-7ce37",
+    "storage_bucket": "baby-lullaby-7ce37.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:890531928293:android:5b8f64396662d851959c0c",
+        "android_client_info": {
+          "package_name": "com.odom.lullaby"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhKzWdZGzqie0mYKgA2Nr67ktqINGJvek"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

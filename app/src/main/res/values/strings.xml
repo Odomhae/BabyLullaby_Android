@@ -21,4 +21,11 @@
     <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
     <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
 
+    <string name="sound_bird">Bird Sound</string>
+    <string name="sound_wave">Wave Sound</string>
+    <string name="sound_rain">Rain Sound</string>
+    <string name="sound_shhh">Shhhh</string>
+    <string name="sound_shoppingmall">Shopping Mall Sound</string>
+    <string name="sound_vinyl">Vinyl Sound</string>
+
 </resources>

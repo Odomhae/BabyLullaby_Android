@@ -302,7 +302,7 @@ class PlaybackService : MediaSessionService() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText("Playing in background")
-            .setSmallIcon(R.drawable.ic_launcher4)
+            .setSmallIcon(R.drawable.launcher6)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setSilent(true)

@@ -32,7 +32,7 @@ fun PlaylistScreen(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // 현재 재생 중인 곡 표시
