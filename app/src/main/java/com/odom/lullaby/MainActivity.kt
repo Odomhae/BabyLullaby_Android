@@ -108,6 +108,13 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         releaseWakeLock()
+        
+        // Clear saved states to force reset on next start
+        val sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        sharedPreferences.edit()
+            .remove("selected_white_sound")
+            .remove("sleep_timer_minutes") // Reset timer duration
+            .apply()
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
@@ -610,6 +617,10 @@ class MainActivity : ComponentActivity() {
                             }
                             if (playlist.isNotEmpty()) {
                                 playlistPlayer.prepare()
+                                // Reset to first song and stop playback on activity recreation
+                                playlistPlayer.seekTo(0)
+                                playlistPlayer.pause()
+                                playlistPlayer.stop()
                             }
                         } else {
                             // If no saved playlist, add all songs in order
