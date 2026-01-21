@@ -1,7 +1,10 @@
 package com.odom.lullaby
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Binder
 import android.os.IBinder
 import android.os.PowerManager
@@ -15,6 +18,12 @@ class TimerService : Service() {
     private val binder = LocalBinder()
     private var job: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var alarmManager: AlarmManager
+    
+    companion object {
+        private const val TIMER_ALARM_REQUEST_CODE = 1001
+    }
     
     private val _timerSecondsLeft = MutableStateFlow(0)
     val timerSecondsLeft: StateFlow<Int> = _timerSecondsLeft
@@ -31,6 +40,14 @@ class TimerService : Service() {
     
     override fun onCreate() {
         super.onCreate()
+        sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        
+        // Clear any previous timer state on app restart
+        // This ensures timer resets when app is reopened after being killed
+        resetTimerState()
+        
+        Log.d("TimerService", "Timer state reset on app restart")
     }
     
     override fun onBind(intent: Intent?): IBinder {
@@ -55,6 +72,15 @@ class TimerService : Service() {
         _timerSecondsLeft.value = totalSeconds
         _isTimerRunning.value = true
         
+        // Save timer state to SharedPreferences
+        sharedPreferences.edit()
+            .putInt("timer_seconds_left", totalSeconds)
+            .putBoolean("is_timer_running", true)
+            .apply()
+        
+        // Schedule alarm as backup
+        scheduleAlarm(totalSeconds)
+        
         Log.d("TimerService", "Timer started, seconds left: ${_timerSecondsLeft.value}, running: ${_isTimerRunning.value}")
         acquireWakeLock()
         
@@ -63,6 +89,12 @@ class TimerService : Service() {
                 delay(1000)
                 if (_isTimerRunning.value) {
                     _timerSecondsLeft.value -= 1
+                    
+                    // Update saved state every second
+                    sharedPreferences.edit()
+                        .putInt("timer_seconds_left", _timerSecondsLeft.value)
+                        .apply()
+                    
                     Log.d("TimerService", "Timer tick: ${_timerSecondsLeft.value} seconds left")
                 }
             }
@@ -72,6 +104,16 @@ class TimerService : Service() {
             if (_timerSecondsLeft.value <= 0) {
                 _timerFinished.value = true
                 _isTimerRunning.value = false
+                
+                // Cancel alarm since timer completed normally
+                cancelAlarm()
+                
+                // Clear timer state from SharedPreferences when finished
+                sharedPreferences.edit()
+                    .putInt("timer_seconds_left", 0)
+                    .putBoolean("is_timer_running", false)
+                    .apply()
+                
                 releaseWakeLock()
                 
                 // Reset after a short delay
@@ -86,6 +128,15 @@ class TimerService : Service() {
     fun stopTimer() {
         job?.cancel()
         _isTimerRunning.value = false
+        
+        // Cancel alarm
+        cancelAlarm()
+        
+        // Update SharedPreferences to reflect stopped state
+        sharedPreferences.edit()
+            .putBoolean("is_timer_running", false)
+            .apply()
+        
         releaseWakeLock()
         // timerSecondsLeft는 리셋하지 않음 (다음 재생 시 이어서 재생할 수 있도록)
         // 단, timer가 완전히 끝났을 때는 0으로 리셋됨
@@ -96,6 +147,16 @@ class TimerService : Service() {
         _timerSecondsLeft.value = 0
         _isTimerRunning.value = false
         _timerFinished.value = false
+        
+        // Cancel alarm
+        cancelAlarm()
+        
+        // Clear all timer state from SharedPreferences
+        sharedPreferences.edit()
+            .putInt("timer_seconds_left", 0)
+            .putBoolean("is_timer_running", false)
+            .apply()
+        
         releaseWakeLock()
     }
     
@@ -122,5 +183,45 @@ class TimerService : Service() {
     override fun onDestroy() {
         stopTimer()
         super.onDestroy()
+    }
+    
+    private fun scheduleAlarm(secondsFromNow: Int) {
+        try {
+            val intent = Intent(this, TimerBroadcastReceiver::class.java)
+            val pendingIntent = PendingIntent.getBroadcast(
+                this,
+                TIMER_ALARM_REQUEST_CODE,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            val triggerTime = System.currentTimeMillis() + (secondsFromNow * 1000L)
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerTime,
+                pendingIntent
+            )
+            
+            Log.d("TimerService", "Alarm scheduled for $secondsFromNow seconds from now")
+        } catch (e: Exception) {
+            Log.e("TimerService", "Failed to schedule alarm: ${e.message}")
+        }
+    }
+    
+    private fun cancelAlarm() {
+        try {
+            val intent = Intent(this, TimerBroadcastReceiver::class.java)
+            val pendingIntent = PendingIntent.getBroadcast(
+                this,
+                TIMER_ALARM_REQUEST_CODE,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            alarmManager.cancel(pendingIntent)
+            Log.d("TimerService", "Alarm cancelled")
+        } catch (e: Exception) {
+            Log.e("TimerService", "Failed to cancel alarm: ${e.message}")
+        }
     }
 }

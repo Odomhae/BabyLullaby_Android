@@ -128,11 +128,10 @@ class MainActivity : ComponentActivity() {
         val timerIntent = Intent(this, TimerService::class.java)
         stopService(timerIntent)
         
-        // Clear saved states to force reset on next start
+        // Clear selected white sound but keep timer state for persistence
         val sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         sharedPreferences.edit()
             .remove("selected_white_sound")
-            .remove("timer_seconds_left") // Clear remaining time but keep timer duration
             .apply()
     }
 
@@ -260,7 +259,11 @@ class MainActivity : ComponentActivity() {
                 }
                 
                 var timerSecondsTotal by remember { mutableIntStateOf(savedTimerMinutes * 60) }
-                var timerSecondsLeft by remember { mutableIntStateOf(timerSecondsTotal) }
+                var timerSecondsLeft by remember { 
+                    // Initialize with saved value from SharedPreferences (for theme change persistence)
+                    val savedSecondsLeft = sharedPreferencesForTimer.getInt("timer_seconds_left", timerSecondsTotal)
+                    mutableIntStateOf(if (savedSecondsLeft > 0) savedSecondsLeft else timerSecondsTotal)
+                }
                 var isTimerRunning by remember { mutableStateOf(false) }
                 var showTimerDialog by remember { mutableStateOf(false) }
                 var timerInputMinutes by remember { mutableStateOf(savedTimerMinutes.toString()) }
