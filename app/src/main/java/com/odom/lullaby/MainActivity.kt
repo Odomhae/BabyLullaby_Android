@@ -276,6 +276,12 @@ class MainActivity : ComponentActivity() {
                     val listener = object : Player.Listener {
                         override fun onIsPlayingChanged(playing: Boolean) {
                             isPlaylistPlaying = playing
+
+                            // [추가] 다른 앱에 의해 일시정지 되거나 직접 정지했을 때 타이머 정지 명령
+                            if (!playing && !whiteSoundPlayer.isPlaying) {
+                                Log.d("MainActivity", "Playlist stopped - stopping timer")
+                                timerService?.stopTimer()
+                            }
                         }
                     }
                     playlistPlayer.addListener(listener)
@@ -289,6 +295,12 @@ class MainActivity : ComponentActivity() {
                     val listener = object : Player.Listener {
                         override fun onIsPlayingChanged(playing: Boolean) {
                             isWhiteSoundPlaying = playing
+
+                            // [추가] 다른 앱에 의해 일시정지 되거나 직접 정지했을 때 타이머 정지 명령
+                            if (!playing && !playlistPlayer.isPlaying) {
+                                Log.d("MainActivity", "WhiteSound stopped - stopping timer")
+                                timerService?.stopTimer()
+                            }
                         }
                     }
                     whiteSoundPlayer.addListener(listener)
@@ -305,14 +317,21 @@ class MainActivity : ComponentActivity() {
                         // timer가 실행 중일 때는 실시간으로 업데이트하고,
                         // timer가 멈췄을 때는 마지막 값을 유지 (일시정지 시 남은 시간 표시)
                         timerService!!.timerSecondsLeft.collect { secondsLeft ->
-                            if (timerService!!.isTimerRunning.value) {
-                                timerSecondsLeft = secondsLeft
-                            } else {
-                                // 타이머가 멈췄을 때도 현재 값을 유지 (0이 아닌 경우에만)
-                                // 타이머가 완전히 끝났을 때는 0이 되므로, 그때는 리셋하지 않음
-                                if (secondsLeft > 0) {
-                                    timerSecondsLeft = secondsLeft
+                            // 실행 중이 아니더라도 0이 들어오면 UI를 갱신해줘야 "00:00"을 봅니다.
+                            Log.d("====ttt RemainTime " , secondsLeft.toString())
+                            timerSecondsLeft = secondsLeft
+
+                            // 만약 0이 되었다면 강제로 정지 상태를 UI에 동기화
+                            if (secondsLeft <= 0) {
+                                isTimerRunning = false
+
+                                // [추가] 플레이리스트 플레이어를 첫 번째 곡의 처음으로 리셋
+                                if (playlistPlayer.mediaItemCount > 0) {
+                                    playlistPlayer.seekTo(0, 0L) // 0번째 인덱스, 0ms 지점으로 이동
+                                    playlistPlayer.pause()       // 확실히 정지
                                 }
+
+                                timerSecondsLeft = timerSecondsTotal
                             }
                         }
                     }
@@ -643,7 +662,7 @@ class MainActivity : ComponentActivity() {
                             if (playlist.isNotEmpty()) {
                                 playlistPlayer.prepare()
                                 // Reset to first song and stop playback on activity recreation
-                                playlistPlayer.seekTo(0)
+                                playlistPlayer.seekTo(0, 0L)
                                 playlistPlayer.pause()
                                 playlistPlayer.stop()
                             }
@@ -914,6 +933,7 @@ class MainActivity : ComponentActivity() {
                                 timerSecondsLeft = timerSecondsTotal
                                 isTimerRunning = false
                                 playlistNotificationManager.setPlayer(null)
+                                playlistPlayer.seekTo(0, 0L)
                                 releaseWakeLock() // Release WakeLock when stopping
                             },
                             modifier = Modifier
