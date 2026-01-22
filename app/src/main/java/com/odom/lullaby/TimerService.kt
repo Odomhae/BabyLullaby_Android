@@ -42,10 +42,62 @@ class TimerService : Service() {
         super.onCreate()
         sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
         alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
-        
-        // Clear any previous timer state on app restart
-        // This ensures timer resets when app is reopened after being killed
-        resetTimerState()
+
+        // Only reset if timer is not actually running
+        val wasRunning = sharedPreferences.getBoolean("is_timer_running", false)
+        if (!wasRunning) {
+            resetTimerState()
+        } else {
+            // Restore timer state from SharedPreferences
+            val savedSeconds = sharedPreferences.getInt("timer_seconds_left", 0)
+            if (savedSeconds > 0) {
+                _timerSecondsLeft.value = savedSeconds
+                _isTimerRunning.value = true
+                Log.d("TimerService", "Restored timer state: $savedSeconds seconds")
+
+                // CRITICAL: Restart the timer countdown
+                acquireWakeLock()
+                scheduleAlarm(savedSeconds)
+
+                job = CoroutineScope(Dispatchers.Main).launch {
+                    while (_timerSecondsLeft.value > 0 && _isTimerRunning.value) {
+                        delay(1000)
+                        if (_isTimerRunning.value) {
+                            _timerSecondsLeft.value -= 1
+                            sharedPreferences.edit()
+                                .putInt("timer_seconds_left", _timerSecondsLeft.value)
+                                .apply()
+
+                            Log.d("TimerService", "Timer tick: ${_timerSecondsLeft.value} seconds left")
+                        }
+                    }
+
+                    // Handle completion...
+                    Log.d("TimerService", "Timer finished! Seconds left: ${_timerSecondsLeft.value}, emitting finished event")
+                    if (_timerSecondsLeft.value <= 0) {
+                        _timerFinished.value = true
+                        _isTimerRunning.value = false
+
+                        // Cancel alarm since timer completed normally
+                        cancelAlarm()
+
+                        // Clear timer state from SharedPreferences when finished
+                        sharedPreferences.edit()
+                            .putInt("timer_seconds_left", 0)
+                            .putBoolean("is_timer_running", false)
+                            .apply()
+
+                        releaseWakeLock()
+
+                        // Reset after a short delay
+                        kotlinx.coroutines.GlobalScope.launch {
+                            delay(1000)
+                            _timerFinished.value = false
+                        }
+                    }
+                }
+            }
+        }
         
         Log.d("TimerService", "Timer state reset on app restart")
     }

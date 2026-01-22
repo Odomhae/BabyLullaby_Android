@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         // Bind to TimerService
         Intent(this, TimerService::class.java).also { intent ->
+            startService(intent)
             bindService(intent, timerServiceConnection, Context.BIND_AUTO_CREATE)
         }
     }

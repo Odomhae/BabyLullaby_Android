@@ -14,11 +14,14 @@ class TimerBroadcastReceiver : BroadcastReceiver() {
         // Stop PlaybackService
         val playbackIntent = Intent(context, PlaybackService::class.java)
         context.stopService(playbackIntent)
+
+        // Stop TimerService
+        val timerIntent = Intent(context, TimerService::class.java)
+        context.stopService(timerIntent)
         
         // Show completion notification
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(1) // PLAYLIST_NOTIFICATION_ID todo jihoon
-        notificationManager.cancel(2) // WHITE_SOUND_NOTIFICATION_ID
+        notificationManager.cancelAll()
         
         // Clear timer state
         val sharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
