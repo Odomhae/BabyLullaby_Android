@@ -75,6 +75,30 @@ class PlaybackService : MediaSessionService() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == "ACTION_STOP_PLAYBACK") {
+
+            // todo jihoon
+            playlistPlayer?.let {
+                it.pause()
+                it.stop()
+               // it.clearMediaItems() // 알림창 제거를 위해 목록 비우기
+            }
+
+            whiteSoundPlayer?.let {
+                it.pause()
+                it.stop()
+             //   it.clearMediaItems()
+            }
+
+            releaseWakeLock()
+            releaseAudioFocus()
+
+            stopForeground(true)
+            stopSelf() // 서비스 종료
+
+            return START_NOT_STICKY
+        }
+
         // Start foreground immediately to avoid timeout exception
         startForeground(NOTIFICATION_ID, createNotification())
         

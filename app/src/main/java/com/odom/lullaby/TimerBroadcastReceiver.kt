@@ -12,8 +12,10 @@ class TimerBroadcastReceiver : BroadcastReceiver() {
         Log.d("TimerBroadcastReceiver", "Timer alarm received - stopping playback")
         
         // Stop PlaybackService
-        val playbackIntent = Intent(context, PlaybackService::class.java)
-        context.stopService(playbackIntent)
+        val playbackIntent = Intent(context, PlaybackService::class.java).apply {
+            action = "ACTION_STOP_PLAYBACK"
+        }
+        context.startService(playbackIntent)
 
         // Stop TimerService
         val timerIntent = Intent(context, TimerService::class.java)
@@ -29,6 +31,8 @@ class TimerBroadcastReceiver : BroadcastReceiver() {
             .putInt("timer_seconds_left", 0)
             .putBoolean("is_timer_running", false)
             .apply()
+
+        context.stopService(playbackIntent)
         
         Log.d("TimerBroadcastReceiver", "Timer completed and playback stopped")
     }

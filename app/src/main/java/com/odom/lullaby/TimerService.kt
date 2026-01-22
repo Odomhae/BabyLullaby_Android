@@ -119,8 +119,12 @@ class TimerService : Service() {
             return
         }
         
-        stopTimer() // Cancel any existing timer
-        
+     //   stopTimer() // Cancel any existing timer
+        job?.cancel()
+
+        // 2. 알람도 새 시간을 위해 취소
+        cancelAlarm()
+
         _timerSecondsLeft.value = totalSeconds
         _isTimerRunning.value = true
         

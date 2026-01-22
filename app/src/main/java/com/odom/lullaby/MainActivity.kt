@@ -111,6 +111,7 @@ class MainActivity : ComponentActivity() {
         // Unbind from TimerService
         if (isTimerServiceBound) {
             unbindService(timerServiceConnection)
+            Log.d("===ttt MainActivity", "Unbinding from TimerService")
             isTimerServiceBound = false
         }
     }
@@ -312,7 +313,7 @@ class MainActivity : ComponentActivity() {
                 }
                 
                 // Use bound TimerService for timer management
-                LaunchedEffect(isTimerServiceBound) {
+                LaunchedEffect(isTimerServiceBound, timerService) {
                     if (isTimerServiceBound && timerService != null) {
                         // Collect timer state from service
                         // timer가 실행 중일 때는 실시간으로 업데이트하고,
@@ -322,17 +323,21 @@ class MainActivity : ComponentActivity() {
                             Log.d("====ttt RemainTime " , secondsLeft.toString())
                             timerSecondsLeft = secondsLeft
 
-                            // 만약 0이 되었다면 강제로 정지 상태를 UI에 동기화
-                            if (secondsLeft <= 0) {
+                            // 만약 1이 되었다면 강제로 정지 상태를 UI에 동기화
+                            if (secondsLeft <= 1) {
+                                timerService?.stopTimer()
+
                                 isTimerRunning = false
+                                timerSecondsLeft = timerSecondsTotal
+                                timerService?.resetTimerState()
 
                                 // [추가] 플레이리스트 플레이어를 첫 번째 곡의 처음으로 리셋
                                 if (playlistPlayer.mediaItemCount > 0) {
                                     playlistPlayer.seekTo(0, 0L) // 0번째 인덱스, 0ms 지점으로 이동
                                     playlistPlayer.pause()       // 확실히 정지
+                                    playlistPlayer.stop()
                                 }
 
-                                timerSecondsLeft = timerSecondsTotal
                             }
                         }
                     }
