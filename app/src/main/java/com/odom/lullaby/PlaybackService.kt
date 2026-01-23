@@ -4,13 +4,17 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.AudioAttributes as Media3AudioAttributes
@@ -30,6 +34,7 @@ class PlaybackService : MediaSessionService() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var audioManager: AudioManager? = null
     private var audioFocusRequest: AudioFocusRequest? = null
+    private var timerBroadcastReceiver: BroadcastReceiver? = null
     
     // Static access to service instance
     companion object {
@@ -49,6 +54,9 @@ class PlaybackService : MediaSessionService() {
         instance = this
         createNotificationChannel()
         audioManager = getSystemService(AudioManager::class.java)
+        
+        // Register timer broadcast receiver
+        registerTimerReceiver()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
@@ -114,6 +122,9 @@ class PlaybackService : MediaSessionService() {
         instance = null
         releaseWakeLock()
         releaseAudioFocus()
+        
+        // Unregister timer broadcast receiver
+        unregisterTimerReceiver()
         playlistMediaSession?.release()
         whiteSoundMediaSession?.release()
         playlistPlayer?.release()
@@ -333,5 +344,55 @@ class PlaybackService : MediaSessionService() {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .build()
+    }
+    
+    private fun registerTimerReceiver() {
+        timerBroadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == "TIMER_COMPLETED") {
+                    val action = intent.getStringExtra("action")
+                    Log.d("PlaybackService", "Received TIMER_COMPLETED broadcast with action: $action")
+                    
+                    if (action == "STOP_PLAYBACK") {
+                        Log.d("PlaybackService", "Stopping playback due to timer completion")
+                        stopAllPlayback()
+                    }
+                }
+            }
+        }
+        
+        val filter = IntentFilter("TIMER_COMPLETED")
+        registerReceiver(timerBroadcastReceiver, filter, Context.RECEIVER_EXPORTED)
+        Log.d("PlaybackService", "Timer broadcast receiver registered")
+    }
+    
+    private fun unregisterTimerReceiver() {
+        timerBroadcastReceiver?.let {
+            unregisterReceiver(it)
+            timerBroadcastReceiver = null
+            Log.d("PlaybackService", "Timer broadcast receiver unregistered")
+        }
+    }
+    
+    private fun stopAllPlayback() {
+        playlistPlayer?.let { player ->
+            if (player.isPlaying) {
+                player.pause()
+                player.stop()
+                Log.d("PlaybackService", "Stopped playlist player")
+            }
+        }
+        
+        whiteSoundPlayer?.let { player ->
+            if (player.isPlaying) {
+                player.pause()
+                player.stop()
+                Log.d("PlaybackService", "Stopped white sound player")
+            }
+        }
+        
+        // Clear notification
+        stopForeground(true)
+        stopSelf()
     }
 }

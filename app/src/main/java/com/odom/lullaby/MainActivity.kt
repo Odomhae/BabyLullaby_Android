@@ -40,6 +40,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaMetadata
 import com.odom.lullaby.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.launch
@@ -251,24 +253,12 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 
-                // Shared sleep timer state
-                val sharedPreferencesForTimer = remember {
-                    contextInner.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-                }
+                // TimerViewModel for state management
+                val timerViewModel: TimerViewModel = viewModel()
+                val timerState by timerViewModel.timerState.collectAsStateWithLifecycle()
                 
-                val savedTimerMinutes = remember {
-                    sharedPreferencesForTimer.getInt("sleep_timer_minutes", 15)
-                }
-                
-                var timerSecondsTotal by remember { mutableIntStateOf(savedTimerMinutes * 60) }
-                var timerSecondsLeft by remember { 
-                    // Initialize with saved value from SharedPreferences (for theme change persistence)
-                    val savedSecondsLeft = sharedPreferencesForTimer.getInt("timer_seconds_left", timerSecondsTotal)
-                    mutableIntStateOf(if (savedSecondsLeft > 0) savedSecondsLeft else timerSecondsTotal)
-                }
-                var isTimerRunning by remember { mutableStateOf(false) }
                 var showTimerDialog by remember { mutableStateOf(false) }
-                var timerInputMinutes by remember { mutableStateOf(savedTimerMinutes.toString()) }
+                var timerInputMinutes by remember { mutableStateOf((timerState.totalSeconds / 60).toString()) }
                 
                 // Observe both players for playback state
                 var isPlaylistPlaying by remember { mutableStateOf(playlistPlayer.isPlaying) }
@@ -312,65 +302,25 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 
-                // Use bound TimerService for timer management
-                LaunchedEffect(isTimerServiceBound, timerService) {
-                    if (isTimerServiceBound && timerService != null) {
-                        // Collect timer state from service
-                        // timer가 실행 중일 때는 실시간으로 업데이트하고,
-                        // timer가 멈췄을 때는 마지막 값을 유지 (일시정지 시 남은 시간 표시)
-                        timerService!!.timerSecondsLeft.collect { secondsLeft ->
-                            // 실행 중이 아니더라도 0이 들어오면 UI를 갱신해줘야 "00:00"을 봅니다.
-                            Log.d("====ttt RemainTime " , secondsLeft.toString())
-                            timerSecondsLeft = secondsLeft
-
-                            // 만약 1이 되었다면 강제로 정지 상태를 UI에 동기화
-                            if (secondsLeft <= 1) {
-                                timerService?.stopTimer()
-
-                                isTimerRunning = false
-                                timerSecondsLeft = timerSecondsTotal
-                                timerService?.resetTimerState()
-
-                                // [추가] 플레이리스트 플레이어를 첫 번째 곡의 처음으로 리셋
-                                if (playlistPlayer.mediaItemCount > 0) {
-                                    playlistPlayer.seekTo(0, 0L) // 0번째 인덱스, 0ms 지점으로 이동
-                                    playlistPlayer.pause()       // 확실히 정지
-                                    playlistPlayer.stop()
-                                }
-
-                            }
-                        }
-                    }
-                }
-                
-                LaunchedEffect(isTimerServiceBound) {
-                    if (isTimerServiceBound && timerService != null) {
-                        // Collect timer running state from service
-                        timerService!!.isTimerRunning.collect { running ->
-                            isTimerRunning = running
-                        }
-                    }
-                }
+                // ViewModel handles timer state automatically via Broadcast receiver
                 
                 // Start timer when any playback starts
                 LaunchedEffect(isPlaylistPlaying, isWhiteSoundPlaying, isTimerServiceBound) {
                     val isAnyPlaying = isPlaylistPlaying || isWhiteSoundPlaying
-                    Log.d("MainActivity", "Timer check - isAnyPlaying: $isAnyPlaying, !isTimerRunning: $!isTimerRunning, timerSecondsTotal: $timerSecondsTotal, isTimerServiceBound: $isTimerServiceBound")
+                    Log.d("MainActivity", "Timer check - isAnyPlaying: $isAnyPlaying, !timerState.isRunning: ${!timerState.isRunning}, timerState.totalSeconds: ${timerState.totalSeconds}, isTimerServiceBound: $isTimerServiceBound")
                     
-                    if (isAnyPlaying && !isTimerRunning && timerSecondsTotal > 0 && isTimerServiceBound) {
+                    if (isAnyPlaying && !timerState.isRunning && timerState.totalSeconds > 0 && isTimerServiceBound) {
                         // Check if we're resuming from pause vs fresh start
-                        if (timerSecondsLeft < timerSecondsTotal && timerSecondsLeft > 0) {
-                            Log.d("MainActivity", "Resuming timer with $timerSecondsLeft seconds")
-                            timerService?.startTimer(timerSecondsLeft) // Resume with remaining time
+                        if (timerState.secondsLeft < timerState.totalSeconds && timerState.secondsLeft > 0) {
+                            Log.d("MainActivity", "Resuming timer with ${timerState.secondsLeft} seconds")
+                            timerService?.startTimer(timerState.secondsLeft) // Resume with remaining time
                         } else {
-                            Log.d("MainActivity", "Starting fresh timer with $timerSecondsTotal seconds")
-                            timerService?.startTimer(timerSecondsTotal) // Fresh start with full duration
+                            Log.d("MainActivity", "Starting fresh timer with ${timerState.totalSeconds} seconds")
+                            timerService?.startTimer(timerState.totalSeconds) // Fresh start with full duration
                         }
                     } else if (!isAnyPlaying && isTimerServiceBound) {
                         Log.d("MainActivity", "Stopping timer - no playback")
                         timerService?.stopTimer()
-                        // 일시정지 시에는 timerSecondsLeft를 리셋하지 않음 (TimerService에서 유지됨)
-                        // 타이머가 완전히 끝났을 때만 리셋됨 (아래 timerFinished 이벤트에서 처리)
                     }
                 }
                 
@@ -540,33 +490,29 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 
-                LaunchedEffect(isTimerServiceBound) {
-                    if (isTimerServiceBound && timerService != null) {
-                        // Collect timer finished event from service
-                        timerService!!.timerFinished.collect { finished ->
-                            if (finished) {
-                                Log.d("MainActivity", "Timer finished event received, stopping playback")
-                                // Stop both players
-                                playlistPlayer.pause()
-                                whiteSoundPlayer.pause()
-                                playlistPlayer.stop()
-                                whiteSoundPlayer.stop()
-                                
-                                // Clear notifications
-                                playlistNotificationManager.setPlayer(null)
-                                whiteSoundNotificationManager.setPlayer(null)
-                                
-                                // Stop PlaybackService
-                                val playbackIntent = Intent(contextInner, PlaybackService::class.java)
-                                contextInner.stopService(playbackIntent)
-                                
-                                // Reset timer display
-                                timerSecondsLeft = timerSecondsTotal
-                                
-                                // Release WakeLock
-                                releaseWakeLock()
-                            }
-                        }
+                // Handle timer finished event from ViewModel
+                LaunchedEffect(timerState.isFinished) {
+                    if (timerState.isFinished) {
+                        Log.d("MainActivity", "Timer finished event received, stopping playback")
+                        // Stop both players
+                        playlistPlayer.pause()
+                        whiteSoundPlayer.pause()
+                        playlistPlayer.stop()
+                        whiteSoundPlayer.stop()
+                        
+                        // Clear notifications
+                        playlistNotificationManager.setPlayer(null)
+                        whiteSoundNotificationManager.setPlayer(null)
+                        
+                        // Stop PlaybackService
+                        val playbackIntent = Intent(contextInner, PlaybackService::class.java)
+                        contextInner.stopService(playbackIntent)
+                        
+                        // Reset ViewModel finished state
+                        timerViewModel.resetFinishedState()
+                        
+                        // Release WakeLock
+                        releaseWakeLock()
                     }
                 }
 
@@ -821,12 +767,12 @@ class MainActivity : ComponentActivity() {
                                         Color(0xFF4A90E2) // Blue
                                 )
                                 Text(
-                                    text = formatTime(timerSecondsLeft),
+                                    text = formatTime(timerState.secondsLeft),
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = if (isTimerRunning) 
+                                    color = if (timerState.isRunning) 
                                         MaterialTheme.colorScheme.primary 
                                     else 
-                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                        MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -902,8 +848,7 @@ class MainActivity : ComponentActivity() {
                                     whiteSoundNotificationManager.setPlayer(whiteSoundPlayer)
                                 },
                                 onResetTimer = {
-                                    timerSecondsLeft = timerSecondsTotal
-                                    isTimerRunning = false
+                                    timerViewModel.setTotalMinutes(timerState.totalSeconds / 60)
                                     whiteSoundNotificationManager.setPlayer(null)
                                     releaseWakeLock() // Release WakeLock when stopping
                                 }
@@ -936,8 +881,7 @@ class MainActivity : ComponentActivity() {
                                 playlistNotificationManager.setPlayer(playlistPlayer)
                             },
                             onResetTimer = {
-                                timerSecondsLeft = timerSecondsTotal
-                                isTimerRunning = false
+                                timerViewModel.setTotalMinutes(timerState.totalSeconds / 60)
                                 playlistNotificationManager.setPlayer(null)
                                 playlistPlayer.seekTo(0, 0L)
                                 releaseWakeLock() // Release WakeLock when stopping
@@ -963,15 +907,10 @@ class MainActivity : ComponentActivity() {
                         },
                         onConfirm = {
                             val minutes = timerInputMinutes.toIntOrNull()?.coerceIn(1, 180) ?: 15
-                            timerSecondsTotal = minutes * 60
-                            timerSecondsLeft = timerSecondsTotal
-                            // Save the timer minutes to SharedPreferences
-                            sharedPreferencesForTimer.edit()
-                                .putInt("sleep_timer_minutes", minutes)
-                                .apply()
+                            timerViewModel.setTotalMinutes(minutes)
                             // Start timer if already playing and service is bound
                             if ((isPlaylistPlaying || isWhiteSoundPlaying) && isTimerServiceBound) {
-                                timerService?.startTimer(timerSecondsTotal)
+                                timerService?.startTimer(minutes * 60)
                             }
                             showTimerDialog = false
                         },

@@ -15,7 +15,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
-import com.google.android.exoplayer2.Player
+//import com.google.android.exoplayer2.Player
+import androidx.media3.common.Player // Use this instead
 
 @Composable
 fun PlaylistScreen(
@@ -99,7 +100,9 @@ fun PlaylistScreen(
 
             // 플레이리스트에 아이템이 있고 플레이어가 정지 상태가 아닐 때 정지 버튼을 표시합니다.
             if (playlist.isNotEmpty() /*&& player.playbackState != Player.STATE_IDLE*/) {
-                IconButton(onClick = { 
+                IconButton(onClick = {
+                    player.pause()
+                    player.seekTo(0, 0L)
                     player.stop()
                     onResetTimer()
                 }) {

@@ -69,6 +69,9 @@ class TimerService : Service() {
                                 .apply()
 
                             Log.d("TimerService", "Timer tick: ${_timerSecondsLeft.value} seconds left")
+                            
+                            // Notify ViewModel of timer update
+                            notifyViewModelTimerUpdate(_timerSecondsLeft.value, _isTimerRunning.value)
                         }
                     }
 
@@ -89,6 +92,9 @@ class TimerService : Service() {
 
                         releaseWakeLock()
 
+                        // Notify PlaybackService that timer completed
+                        notifyPlaybackServiceTimerCompleted()
+                        
                         // Reset after a short delay
                         kotlinx.coroutines.GlobalScope.launch {
                             delay(1000)
@@ -152,6 +158,9 @@ class TimerService : Service() {
                         .apply()
                     
                     Log.d("TimerService", "Timer tick: ${_timerSecondsLeft.value} seconds left")
+                    
+                    // Notify ViewModel of timer update
+                    notifyViewModelTimerUpdate(_timerSecondsLeft.value, _isTimerRunning.value)
                 }
             }
             
@@ -239,6 +248,28 @@ class TimerService : Service() {
     override fun onDestroy() {
         stopTimer()
         super.onDestroy()
+    }
+    
+    private fun notifyPlaybackServiceTimerCompleted() {
+        try {
+            val intent = Intent("TIMER_COMPLETED")
+            intent.putExtra("action", "STOP_PLAYBACK")
+            sendBroadcast(intent)
+            Log.d("TimerService", "Sent TIMER_COMPLETED broadcast to PlaybackService")
+        } catch (e: Exception) {
+            Log.e("TimerService", "Failed to send broadcast: ${e.message}")
+        }
+    }
+    
+    private fun notifyViewModelTimerUpdate(secondsLeft: Int, isRunning: Boolean) {
+        try {
+            val intent = Intent("TIMER_STATE_UPDATED")
+            intent.putExtra("seconds_left", secondsLeft)
+            intent.putExtra("is_running", isRunning)
+            sendBroadcast(intent)
+        } catch (e: Exception) {
+            Log.e("TimerService", "Failed to send timer update broadcast: ${e.message}")
+        }
     }
     
     private fun scheduleAlarm(secondsFromNow: Int) {
