@@ -101,6 +101,7 @@ fun PlaylistScreen(
             if (playlist.isNotEmpty() /*&& player.playbackState != Player.STATE_IDLE*/) {
                 IconButton(onClick = { 
                     player.stop()
+                    player.seekTo(0, 0L)
                     onResetTimer()
                 }) {
                     Icon(

@@ -117,6 +117,23 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         releaseWakeLock()
+
+        // Stop and reset TimerService to ensure full duration on next start
+        if (isTimerServiceBound && timerService != null) {
+            timerService?.stopTimer()
+            timerService?.resetTimerState()
+        }
+
+        // Stop the TimerService completely
+        val timerIntent = Intent(this, TimerService::class.java)
+        stopService(timerIntent)
+
+        // Clear saved states to force reset on next start
+        val sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        sharedPreferences.edit()
+            .remove("selected_white_sound")
+            .remove("timer_seconds_left") // Clear remaining time but keep timer duration
+            .apply()
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
@@ -254,12 +271,41 @@ class MainActivity : ComponentActivity() {
                 
                 DisposableEffect(playlistPlayer) {
                     val listener = object : Player.Listener {
-                        override fun onIsPlayingChanged(playing: Boolean) {
-                            isPlaylistPlaying = playing
+
+                        override fun onEvents(player: Player, events: Player.Events) {
+                            Log.d("===ttt MainActivity", "onEventsName : ${events.get(0).toString()}")
+
+                            // isPlaying이 바뀌었거나, 재생 상태(IDLE, BUFFERING, READY, ENDED)가 바뀐 경우 모두 체크
+                            if (events.containsAny(
+                                    Player.EVENT_IS_PLAYING_CHANGED,
+                                    Player.EVENT_PLAYBACK_STATE_CHANGED,
+                                    Player.EVENT_PLAYBACK_SUPPRESSION_REASON_CHANGED
+                                )
+                            ) {
+                                val isActuallyPlaying = player.isPlaying
+                                val isBuffering = player.playbackState == Player.STATE_BUFFERING
+                                val isSuppressed = player.playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE
+                                val userWantsToPlay = player.playWhenReady
+
+                                // [수정 핵심]
+                                // 1. 실제로 소리가 나고 있거나 (isPlaying)
+                                // 2. 버퍼링 중이거나 (isBuffering)
+                                // 3. 시스템에 의해 억제된 상태(Suppressed)일지라도 사용자가 재생을 눌러놓은 상태라면
+                                // 타이머는 '재생 중'으로 간주하여 true를 유지합니다.
+                                isPlaylistPlaying = isActuallyPlaying || (userWantsToPlay && (isBuffering || isSuppressed))
+                            }
+
+                            Log.d("===ttt MainActivity", "onEvents: $isPlaylistPlaying")
                         }
+
                     }
                     playlistPlayer.addListener(listener)
-                    isPlaylistPlaying = playlistPlayer.isPlaying
+
+                    // 초기 설정
+                    isPlaylistPlaying = playlistPlayer.isPlaying ||
+                            (playlistPlayer.playWhenReady && (playlistPlayer.playbackState == Player.STATE_BUFFERING ||
+                                    playlistPlayer.playbackSuppressionReason != Player.PLAYBACK_SUPPRESSION_REASON_NONE))
+
                     onDispose {
                         playlistPlayer.removeListener(listener)
                     }
@@ -279,12 +325,13 @@ class MainActivity : ComponentActivity() {
                 }
                 
                 // Use bound TimerService for timer management
-                LaunchedEffect(isTimerServiceBound) {
-                    if (isTimerServiceBound && timerService != null) {
+                LaunchedEffect(timerService) {
+                    if ( timerService != null) {
                         // Collect timer state from service
                         // timer가 실행 중일 때는 실시간으로 업데이트하고,
                         // timer가 멈췄을 때는 마지막 값을 유지 (일시정지 시 남은 시간 표시)
                         timerService!!.timerSecondsLeft.collect { secondsLeft ->
+                            Log.d("===ttt MainActivity", "RemainTime: $secondsLeft")
                             if (timerService!!.isTimerRunning.value) {
                                 timerSecondsLeft = secondsLeft
                             } else {
@@ -310,7 +357,7 @@ class MainActivity : ComponentActivity() {
                 // Start timer when any playback starts
                 LaunchedEffect(isPlaylistPlaying, isWhiteSoundPlaying, isTimerServiceBound) {
                     val isAnyPlaying = isPlaylistPlaying || isWhiteSoundPlaying
-                    Log.d("MainActivity", "Timer check - isAnyPlaying: $isAnyPlaying, !isTimerRunning: $!isTimerRunning, timerSecondsTotal: $timerSecondsTotal, isTimerServiceBound: $isTimerServiceBound")
+                    Log.d("MainActivity", "Timer check - isAnyPlaying: $isAnyPlaying, !isTimerRunning: $isTimerRunning, timerSecondsTotal: $timerSecondsTotal, isTimerServiceBound: $isTimerServiceBound")
                     
                     if (isAnyPlaying && !isTimerRunning && timerSecondsTotal > 0 && isTimerServiceBound) {
                         // Check if we're resuming from pause vs fresh start
@@ -322,10 +369,19 @@ class MainActivity : ComponentActivity() {
                             timerService?.startTimer(timerSecondsTotal) // Fresh start with full duration
                         }
                     } else if (!isAnyPlaying && isTimerServiceBound) {
-                        Log.d("MainActivity", "Stopping timer - no playback")
-                        timerService?.stopTimer()
-                        // 일시정지 시에는 timerSecondsLeft를 리셋하지 않음 (TimerService에서 유지됨)
-                        // 타이머가 완전히 끝났을 때만 리셋됨 (아래 timerFinished 이벤트에서 처리)
+                        Log.d("===ttt MainActivity", "$isAnyPlaying , $isPlaylistPlaying")
+
+                        // [방어 로직] 곡 전환 시 찰나의 순간 false가 되는 것에 대비해 1초 대기 후 다시 확인
+                        delay(1000)
+
+                        // 1초 뒤에도 여전히 아무것도 재생 중이 아닐 때만 진짜로 멈춤
+                        val reCheckAnyPlaying = playlistPlayer.isPlaying || whiteSoundPlayer.isPlaying ||
+                                (playlistPlayer.playbackState == Player.STATE_BUFFERING && playlistPlayer.playWhenReady)
+
+                        if (!reCheckAnyPlaying) {
+                            Log.d("===ttt MainActivity", "Stopping timer - confirmed no playback")
+                            timerService?.stopTimer()
+                        }
                     }
                 }
                 
@@ -506,6 +562,7 @@ class MainActivity : ComponentActivity() {
                                 whiteSoundPlayer.pause()
                                 playlistPlayer.stop()
                                 whiteSoundPlayer.stop()
+                                playlistPlayer.seekTo(0, 0L)
                                 
                                 // Clear notifications
                                 playlistNotificationManager.setPlayer(null)
@@ -622,6 +679,9 @@ class MainActivity : ComponentActivity() {
                             }
                             if (playlist.isNotEmpty()) {
                                 playlistPlayer.prepare()
+                                playlistPlayer.seekTo(0, 0L)
+                                playlistPlayer.pause()
+                                playlistPlayer.stop()
                             }
                         } else {
                             // If no saved playlist, add all songs in order
@@ -890,6 +950,7 @@ class MainActivity : ComponentActivity() {
                                 timerSecondsLeft = timerSecondsTotal
                                 isTimerRunning = false
                                 playlistNotificationManager.setPlayer(null)
+                                playlistPlayer.seekTo(0, 0L)
                                 releaseWakeLock() // Release WakeLock when stopping
                             },
                             modifier = Modifier

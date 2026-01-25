@@ -90,6 +90,14 @@ class TimerService : Service() {
         // timerSecondsLeft는 리셋하지 않음 (다음 재생 시 이어서 재생할 수 있도록)
         // 단, timer가 완전히 끝났을 때는 0으로 리셋됨
     }
+
+    fun resetTimerState() {
+        job?.cancel()
+        _timerSecondsLeft.value = 0
+        _isTimerRunning.value = false
+        _timerFinished.value = false
+        releaseWakeLock()
+    }
     
     private fun acquireWakeLock() {
         if (wakeLock == null || !wakeLock!!.isHeld) {
