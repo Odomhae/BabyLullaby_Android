@@ -337,7 +337,7 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 // 타이머가 멈췄을 때도 현재 값을 유지 (0이 아닌 경우에만)
                                 // 타이머가 완전히 끝났을 때는 0이 되므로, 그때는 리셋하지 않음
-                                if (secondsLeft > 0) {
+                                if (secondsLeft > 1) {
                                     timerSecondsLeft = secondsLeft
                                 }
                             }

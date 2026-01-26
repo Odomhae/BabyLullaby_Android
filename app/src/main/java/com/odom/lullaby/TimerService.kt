@@ -69,13 +69,14 @@ class TimerService : Service() {
             
             // Timer finished - notify MainActivity
             Log.d("TimerService", "Timer finished! Seconds left: ${_timerSecondsLeft.value}, emitting finished event")
-            if (_timerSecondsLeft.value <= 0) {
+            if (_timerSecondsLeft.value <= 1) {
                 _timerFinished.value = true
                 _isTimerRunning.value = false
+                _timerSecondsLeft.value = 0
                 releaseWakeLock()
                 
                 // Reset after a short delay
-                kotlinx.coroutines.GlobalScope.launch {
+                GlobalScope.launch {
                     delay(1000)
                     _timerFinished.value = false
                 }
