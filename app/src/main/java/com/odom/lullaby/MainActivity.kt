@@ -551,8 +551,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 
-                LaunchedEffect(isTimerServiceBound) {
-                    if (isTimerServiceBound && timerService != null) {
+                LaunchedEffect( timerService) {
+                    if ( timerService != null) {
                         // Collect timer finished event from service
                         timerService!!.timerFinished.collect { finished ->
                             if (finished) {
