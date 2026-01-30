@@ -1,5 +1,6 @@
 package com.odom.lullaby
 
+import android.app.Activity
 import android.app.NotificationManager
 import android.content.Context
 import android.net.Uri
@@ -31,15 +32,23 @@ import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.ActivityInfo
 import android.os.IBinder
 import android.os.PowerManager
 import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat.*
 import androidx.media3.common.MediaMetadata
 import com.odom.lullaby.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.launch
@@ -140,6 +149,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
         // AdMob 초기화
         MobileAds.initialize(this) {}
@@ -150,6 +160,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
+            DoubleBackToExitApp()
             Modifier.systemBarsPadding()
 
             val context = LocalContext.current
@@ -1014,4 +1025,99 @@ private fun requestIgnoreBatteryOptimizations() {
         }
     }
 
+}
+
+//@Composable
+//fun DoubleBackToExitApp() {
+//    val context = LocalContext.current
+//    var backPressedTime by remember { mutableStateOf(0L) }
+//
+//    BackHandler {
+//        val currentTime = System.currentTimeMillis()
+//        if (backPressedTime == 0L || currentTime - backPressedTime >= 2000) {
+//            backPressedTime = currentTime
+//            Toast.makeText(context, "한번 더 누르시면 앱이 종료됩니다.", Toast.LENGTH_SHORT).show()
+//        } else {
+//            backPressedTime = 0L
+//            (context as? Activity)?.let{
+//                finishAffinity(it)
+//                System.exit(0)
+//            }
+//        }
+//
+//    }
+//}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DoubleBackToExitApp() {
+    val context = LocalContext.current
+    var showSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+
+    BackHandler {
+        showSheet = true
+    }
+
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            sheetState = sheetState,
+            // This ensures the background color of the sheet follows your theme
+            containerColor = MaterialTheme.colorScheme.surface,
+            // This ensures icons and default text follow your theme
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            // Optional: add a border or change shape for better visibility
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .padding(bottom = 32.dp), // Extra space for navigation bar
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "앱을 종료하시겠습니까?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Show Ad here
+                BannerAdView(modifier = Modifier.fillMaxWidth())
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Button(
+                        onClick = { showSheet = false },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.onSecondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary
+                        )
+                    ) {
+                        Text("취소", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Button(
+                        onClick = { (context as? Activity)?.finishAffinity() },
+                        modifier = Modifier.weight(1f),
+                        // Use primary for the 'Exit' button
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        )
+                    ) {
+                        Text("종료")
+                    }
+                }
+            }
+        }
+    }
 }
