@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Coco Jaja S\'il Vous Plaît Jaja</string>
+    <string name="playback_channel_name">Contrôles de lecture</string>
+    <string name="playback_channel_description">Contrôles de lecture multimédia</string>
+
+    <string name="lullaby">Berceuse</string>
+    <string name="white_noise">Bruit blanc</string>
+
+    <string name="play">Lire</string>
+    <string name="playlist">Liste de lecture</string>
+    <string name="cancel">Annuler</string>
+    <string name="set">Définir</string>
+    <string name="finish">Quitter</string>
+    <string name="set_sleep_timer">Définir la minuterie d\'arrêt automatique (minutes)</string>
+
+    <string name="no_playing_song">Aucun morceau en cours de lecture</string>
+
+    <string name="TEST_admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="TEST_admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+
+    <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
+    <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
+
+    <string name="sound_bird">Chant d\'oiseaux</string>
+    <string name="sound_wave">Son des vagues</string>
+    <string name="sound_rain">Son de la pluie</string>
+    <string name="sound_shhh">Chut</string>
+    <string name="sound_shoppingmall">Son du centre commercial</string>
+    <string name="sound_vinyl">Son du vinyle</string>
+
+    <string name="ask_app_finish">Voulez-vous quitter l\'application ?</string>
+</resources>

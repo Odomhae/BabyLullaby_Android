@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">कोको जाजा कृपया जाजा</string>
+    <string name="playback_channel_name">प्लेबैक नियंत्रण</string>
+    <string name="playback_channel_description">मीडिया प्लेबैक नियंत्रण</string>
+
+    <string name="lullaby">लोरी</string>
+    <string name="white_noise">सफेद शोर</string>
+
+    <string name="play">चलाएँ</string>
+    <string name="playlist">प्लेलिस्ट</string>
+    <string name="cancel">रद्द करें</string>
+    <string name="set">सेट करें</string>
+    <string name="finish">बंद करें</string>
+    <string name="set_sleep_timer">स्वचालित बंद टाइमर सेट करें (मिनट)</string>
+
+    <string name="no_playing_song">कोई गीत नहीं चल रहा है</string>
+
+    <string name="TEST_admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="TEST_admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+
+    <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
+    <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
+
+    <string name="sound_bird">पक्षियों की आवाज़</string>
+    <string name="sound_wave">लहरों की आवाज़</string>
+    <string name="sound_rain">बारिश की आवाज़</string>
+    <string name="sound_shhh">श्श्श</string>
+    <string name="sound_shoppingmall">शॉपिंग मॉल की आवाज़</string>
+    <string name="sound_vinyl">विनाइल की आवाज़</string>
+
+    <string name="ask_app_finish">क्या आप ऐप बंद करना चाहते हैं?</string>
+</resources>

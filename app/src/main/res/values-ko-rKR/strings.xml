@@ -10,6 +10,7 @@
     <string name="playlist">재생목록</string>
     <string name="cancel">취소</string>
     <string name="set">설정</string>
+    <string name="finish">종료</string>
     <string name="set_sleep_timer">자동꺼짐 시간설정(분)</string>
 
 
@@ -29,5 +30,7 @@
     <string name="sound_shhh">쉿</string>
     <string name="sound_shoppingmall">쇼핑몰소리</string>
     <string name="sound_vinyl">비닐소리</string>
+
+    <string name="ask_app_finish">앱을 종료하시겠습니까?</string>
 
 </resources>

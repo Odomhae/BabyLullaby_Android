@@ -160,7 +160,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            DoubleBackToExitApp()
             Modifier.systemBarsPadding()
 
             val context = LocalContext.current
@@ -199,6 +198,8 @@ class MainActivity : ComponentActivity() {
             }
             
             MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = false) {
+                DoubleBackToExitApp()
+
                 val contextInner = LocalContext.current
                 
                 // Set background color based on theme
@@ -1078,7 +1079,7 @@ fun DoubleBackToExitApp() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "앱을 종료하시겠습니까?",
+                    text = stringResource(R.string.ask_app_finish),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -1099,11 +1100,10 @@ fun DoubleBackToExitApp() {
                         onClick = { showSheet = false },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.onSecondary,
-                            contentColor = MaterialTheme.colorScheme.onSecondary
+                            containerColor = MaterialTheme.colorScheme.onSurface,
                         )
                     ) {
-                        Text("취소", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.cancel))
                     }
                     Button(
                         onClick = { (context as? Activity)?.finishAffinity() },
@@ -1111,10 +1111,9 @@ fun DoubleBackToExitApp() {
                         // Use primary for the 'Exit' button
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
                         )
                     ) {
-                        Text("종료")
+                        Text(stringResource(R.string.finish))
                     }
                 }
             }

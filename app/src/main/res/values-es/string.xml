@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Coco Jaja Por Favor Jaja</string>
+    <string name="playback_channel_name">Controles de reproducción</string>
+    <string name="playback_channel_description">Controles de reproducción multimedia</string>
+
+    <string name="lullaby">Canción de cuna</string>
+    <string name="white_noise">Ruido blanco</string>
+
+    <string name="play">Reproducir</string>
+    <string name="playlist">Lista de reproducción</string>
+    <string name="cancel">Cancelar</string>
+    <string name="set">Configurar</string>
+    <string name="finish">Cerrar</string>
+    <string name="set_sleep_timer">Configurar temporizador de apagado automático (minutos)</string>
+
+    <string name="no_playing_song">No hay canción en reproducción</string>
+
+    <string name="TEST_admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="TEST_admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+
+    <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
+    <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
+
+    <string name="sound_bird">Sonido de pájaros</string>
+    <string name="sound_wave">Sonido de olas</string>
+    <string name="sound_rain">Sonido de lluvia</string>
+    <string name="sound_shhh">Shhh</string>
+    <string name="sound_shoppingmall">Sonido de centro comercial</string>
+    <string name="sound_vinyl">Sonido de vinilo</string>
+
+    <string name="ask_app_finish">¿Desea cerrar la aplicación?</string>
+</resources>

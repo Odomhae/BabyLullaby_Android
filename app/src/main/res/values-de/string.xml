@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Koko Jaja Bitte Jaja</string>
+    <string name="playback_channel_name">Wiedergabesteuerung</string>
+    <string name="playback_channel_description">Medienwiedergabesteuerung</string>
+
+    <string name="lullaby">Wiegenlied</string>
+    <string name="white_noise">Weißes Rauschen</string>
+
+    <string name="play">Abspielen</string>
+    <string name="playlist">Wiedergabeliste</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="set">Einstellen</string>
+    <string name="finish">Beenden</string>
+    <string name="set_sleep_timer">Automatische Abschaltzeit einstellen (Minuten)</string>
+
+    <string name="no_playing_song">Kein Lied wird abgespielt</string>
+
+    <string name="TEST_admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="TEST_admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+
+    <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
+    <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
+
+    <string name="sound_bird">Vogelgesang</string>
+    <string name="sound_wave">Wellengeräusch</string>
+    <string name="sound_rain">Regengeräusch</string>
+    <string name="sound_shhh">Pssst</string>
+    <string name="sound_shoppingmall">Einkaufszentrum-Geräusch</string>
+    <string name="sound_vinyl">Vinylgeräusch</string>
+
+    <string name="ask_app_finish">Möchten Sie die App beenden?</string>
+</resources>

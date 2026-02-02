@@ -10,6 +10,7 @@
     <string name="playlist">Playlist</string>
     <string name="cancel">Cancel</string>
     <string name="set">Set</string>
+    <string name="finish">Finish</string>
     <string name="set_sleep_timer">Set sleep timer (minutes)</string>
 
     <string name="no_playing_song">No track playing</string>
@@ -27,5 +28,7 @@
     <string name="sound_shhh">Shhhh</string>
     <string name="sound_shoppingmall">Shopping Mall Sound</string>
     <string name="sound_vinyl">Vinyl Sound</string>
+
+    <string name="ask_app_finish">Do you want to finish app?</string>
 
 </resources>
