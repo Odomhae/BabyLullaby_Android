@@ -73,6 +73,9 @@ dependencies {
     // If you're using Compose, also add this if not already present
     implementation ("androidx.compose.runtime:runtime-livedata:1.6.0")
 
+    implementation("com.google.android.play:review:2.0.1")
+    implementation("com.google.android.play:review-ktx:2.0.1")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

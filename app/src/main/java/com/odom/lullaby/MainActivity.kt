@@ -55,6 +55,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.android.gms.ads.MobileAds
+import com.google.android.play.core.review.ReviewManagerFactory
 
 private const val PLAYLIST_NOTIFICATION_ID = 1
 private const val WHITE_SOUND_NOTIFICATION_ID = 2
@@ -1056,8 +1057,24 @@ fun DoubleBackToExitApp() {
     var showSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
+    val reviewManager = remember { ReviewManagerFactory.create(context) }
+
+    // 리뷰 요청 함수
+    val launchReviewFlow = {
+        val request = reviewManager.requestReviewFlow()
+        request.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val reviewInfo = task.result
+                (context as? Activity)?.let { activity ->
+                    reviewManager.launchReviewFlow(activity, reviewInfo)
+                }
+            }
+        }
+    }
+
     BackHandler {
         showSheet = true
+        launchReviewFlow()
     }
 
     if (showSheet) {
