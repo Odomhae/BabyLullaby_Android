@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">乖乖睡，快快睡_摇篮曲</string>
+    <string name="playback_channel_name">播放控制</string>
+    <string name="playback_channel_description">媒体播放控制</string>
+
+    <string name="lullaby">摇篮曲</string>
+    <string name="white_noise">白噪音</string>
+
+    <string name="play">播放</string>
+    <string name="playlist">播放列表</string>
+    <string name="cancel">取消</string>
+    <string name="set">设置</string>
+    <string name="finish">结束</string>
+    <string name="set_sleep_timer">自动关闭时间设置(分钟)</string>
+
+    <string name="no_playing_song">没有正在播放的歌曲</string>
+
+    <string name="TEST_admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="TEST_admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+
+    <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
+    <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
+
+    <string name="sound_bird">鸟声</string>
+    <string name="sound_wave">海浪声</string>
+    <string name="sound_rain">雨声</string>
+    <string name="sound_shhh">嘘</string>
+    <string name="sound_shoppingmall">商场声音</string>
+    <string name="sound_vinyl">塑料声</string>
+
+    <string name="ask_app_finish">要退出应用吗？</string>
+</resources>

@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">ねんねんころり：ねんねしな_子守唄</string>
+    <string name="playback_channel_name">再生コントロール</string>
+    <string name="playback_channel_description">メディア再生コントロール</string>
+
+    <string name="lullaby">子守唄</string>
+    <string name="white_noise">ホワイトノイズ</string>
+
+    <string name="play">再生</string>
+    <string name="playlist">プレイリスト</string>
+    <string name="cancel">キャンセル</string>
+    <string name="set">設定</string>
+    <string name="finish">終了</string>
+    <string name="set_sleep_timer">自動オフ時間設定(分)</string>
+
+    <string name="no_playing_song">再生中の曲はありません</string>
+
+    <string name="TEST_admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="TEST_admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+
+    <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
+    <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
+
+    <string name="sound_bird">鳥の声</string>
+    <string name="sound_wave">波の音</string>
+    <string name="sound_rain">雨の音</string>
+    <string name="sound_shhh">シーッ</string>
+    <string name="sound_shoppingmall">ショッピングモールの音</string>
+    <string name="sound_vinyl">ビニールの音</string>
+
+    <string name="ask_app_finish">アプリを終了しますか？</string>
+</resources>

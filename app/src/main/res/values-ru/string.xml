@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">Спи, моя кроха_Колыбельная</string>
+    <string name="playback_channel_name">Управление воспроизведением</string>
+    <string name="playback_channel_description">Управление медиаплеером</string>
+
+    <string name="lullaby">Колыбельная</string>
+    <string name="white_noise">Белый шум</string>
+
+    <string name="play">Воспроизвести</string>
+    <string name="playlist">Плейлист</string>
+    <string name="cancel">Отмена</string>
+    <string name="set">Настройки</string>
+    <string name="finish">Завершить</string>
+    <string name="set_sleep_timer">Установить таймер сна (мин)</string>
+
+    <string name="no_playing_song">Нет воспроизводимой песни</string>
+
+    <string name="TEST_admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="TEST_admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+
+    <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~7343587137</string>
+    <string name="REAL_admob_banner_id">ca-app-pub-6729344454320392/2071079152</string>
+
+    <string name="sound_bird">Пение птиц</string>
+    <string name="sound_wave">Звук волн</string>
+    <string name="sound_rain">Звук дождя</string>
+    <string name="sound_shhh">Тсс</string>
+    <string name="sound_shoppingmall">Звук торгового центра</string>
+    <string name="sound_vinyl">Звук пластика</string>
+
+    <string name="ask_app_finish">Вы хотите закрыть приложение?</string>
+</resources>
