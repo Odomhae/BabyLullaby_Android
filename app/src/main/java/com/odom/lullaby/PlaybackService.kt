@@ -34,12 +34,23 @@ class PlaybackService : MediaSessionService() {
     // Static access to service instance
     companion object {
         private var instance: PlaybackService? = null
-        
+
+        // MainActivity가 생성한 플레이어 등록 (setPlayers는 호출되는 곳이 없어
+        // instance 기반 접근만으로는 항상 null이 반환됨)
+        // 등록해 두면 Activity 없이도 TimerService가 재생을 정지시킬 수 있다
+        private var registeredPlaylistPlayer: ExoPlayer? = null
+        private var registeredWhiteSoundPlayer: ExoPlayer? = null
+
         fun getInstance(): PlaybackService? = instance
-        
-        fun getPlaylistPlayer(): ExoPlayer? = instance?.playlistPlayer
-        fun getWhiteSoundPlayer(): ExoPlayer? = instance?.whiteSoundPlayer
-        
+
+        fun registerPlayers(playlistPlayer: ExoPlayer?, whiteSoundPlayer: ExoPlayer?) {
+            registeredPlaylistPlayer = playlistPlayer
+            registeredWhiteSoundPlayer = whiteSoundPlayer
+        }
+
+        fun getPlaylistPlayer(): ExoPlayer? = instance?.playlistPlayer ?: registeredPlaylistPlayer
+        fun getWhiteSoundPlayer(): ExoPlayer? = instance?.whiteSoundPlayer ?: registeredWhiteSoundPlayer
+
         private const val NOTIFICATION_ID = 100
         private const val CHANNEL_ID = "playback_service_channel"
     }

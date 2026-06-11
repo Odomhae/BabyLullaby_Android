@@ -65,8 +65,11 @@ private const val CHANNEL_ID = "playback_channel"
 class MainActivity : ComponentActivity() {
 
     private var wakeLock: PowerManager.WakeLock? = null
-    private var timerService: TimerService? = null
-    private var isTimerServiceBound = false
+
+    // LaunchedEffect 키로 쓰이므로 Compose가 변경을 감지할 수 있게 State로 선언
+    // (일반 var이면 바인딩 완료 시점에 effect가 재시작되지 않음)
+    private var timerService by mutableStateOf<TimerService?>(null)
+    private var isTimerServiceBound by mutableStateOf(false)
 
     // isPlaying 상태를 업데이트하는 람다 함수를 저장할 변수 추가
     private var updateIsPlayingState: ((Boolean) -> Unit)? = null
@@ -348,9 +351,9 @@ class MainActivity : ComponentActivity() {
                             if (timerService!!.isTimerRunning.value) {
                                 timerSecondsLeft = secondsLeft
                             } else {
-                                // 타이머가 멈췄을 때도 현재 값을 유지 (0이 아닌 경우에만)
-                                // 타이머가 완전히 끝났을 때는 0이 되므로, 그때는 리셋하지 않음
-                                if (secondsLeft > 1) {
+                                // 타이머가 멈췄을 때도 현재 값을 유지
+                                // 종료/리셋 시 서비스가 0을 내보내므로 그때는 표시값을 덮어쓰지 않음
+                                if (secondsLeft > 0) {
                                     timerSecondsLeft = secondsLeft
                                 }
                             }
@@ -567,30 +570,23 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect( timerService) {
                     if ( timerService != null) {
                         // Collect timer finished event from service
-                        timerService!!.timerFinished.collect { finished ->
-                            if (finished) {
-                                Log.d("MainActivity", "Timer finished event received, stopping playback")
-                                // Stop both players
-                                playlistPlayer.pause()
-                                whiteSoundPlayer.pause()
-                                playlistPlayer.stop()
-                                whiteSoundPlayer.stop()
-                                playlistPlayer.seekTo(0, 0L)
-                                
-                                // Clear notifications
-                                playlistNotificationManager.setPlayer(null)
-                                whiteSoundNotificationManager.setPlayer(null)
-                                
-                                // Stop PlaybackService
-                                val playbackIntent = Intent(contextInner, PlaybackService::class.java)
-                                contextInner.stopService(playbackIntent)
-                                
-                                // Reset timer display
-                                timerSecondsLeft = timerSecondsTotal
-                                
-                                // Release WakeLock
-                                releaseWakeLock()
-                            }
+                        // 플레이어 정지는 TimerService가 직접 수행하므로 여기서는 UI 정리만 담당
+                        timerService!!.timerFinished.collect {
+                            Log.d("MainActivity", "Timer finished event received, cleaning up UI")
+
+                            // Clear notifications
+                            playlistNotificationManager.setPlayer(null)
+                            whiteSoundNotificationManager.setPlayer(null)
+
+                            // Stop PlaybackService
+                            val playbackIntent = Intent(contextInner, PlaybackService::class.java)
+                            contextInner.stopService(playbackIntent)
+
+                            // Reset timer display
+                            timerSecondsLeft = timerSecondsTotal
+
+                            // Release WakeLock
+                            releaseWakeLock()
                         }
                     }
                 }
@@ -753,6 +749,9 @@ class MainActivity : ComponentActivity() {
 
                 // Observe playlist player state changes
                 DisposableEffect(playlistPlayer) {
+                    // 타이머 종료 시 TimerService가 Activity 없이도 재생을 멈출 수 있도록 등록
+                    PlaybackService.registerPlayers(playlistPlayer, whiteSoundPlayer)
+
                     val listener = object : Player.Listener {
                         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                             currentIndex = playlistPlayer.currentMediaItemIndex
@@ -776,6 +775,8 @@ class MainActivity : ComponentActivity() {
                     }
 
                     onDispose {
+                        // 해제된 플레이어가 TimerService에서 참조되지 않도록 등록 해제
+                        PlaybackService.registerPlayers(null, null)
                         playlistPlayer.removeListener(listener)
                         playlistNotificationManager.setPlayer(null)
                         whiteSoundNotificationManager.setPlayer(null)
@@ -926,6 +927,7 @@ class MainActivity : ComponentActivity() {
                                     whiteSoundNotificationManager.setPlayer(whiteSoundPlayer)
                                 },
                                 onResetTimer = {
+                                    timerService?.resetTimerState()
                                     timerSecondsLeft = timerSecondsTotal
                                     isTimerRunning = false
                                     whiteSoundNotificationManager.setPlayer(null)
@@ -960,6 +962,7 @@ class MainActivity : ComponentActivity() {
                                 playlistNotificationManager.setPlayer(playlistPlayer)
                             },
                             onResetTimer = {
+                                timerService?.resetTimerState()
                                 timerSecondsLeft = timerSecondsTotal
                                 isTimerRunning = false
                                 playlistNotificationManager.setPlayer(null)
